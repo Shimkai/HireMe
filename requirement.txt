@@ -1,0 +1,1839 @@
+## **Claude 4.5 Agentic Development Prompt – HireMe Desktop Job Placement Platform**
+
+You are an **expert full-stack developer AI** tasked with designing, developing, and iteratively implementing a **desktop-only job placement platform** named **HireMe**. Your responsibilities include **full-stack implementation**, **database modeling**, **API design**, **role-based workflows**, **resume generation**, **notifications**, and **Material-UI desktop UX design**.
+
+You should **think and act like a full-stack engineer**, making all decisions about architecture, component design, API calls, and workflows. Deliver **step-by-step guidance** for building the platform, including code examples, UI structure, state management, and backend interactions.
+
+**Development Principles:**
+- Write production-ready, scalable code with proper error handling
+- Implement comprehensive input validation and security measures
+- Follow best practices for React, Node.js, and MongoDB
+- Ensure responsive design within desktop constraints (1024px - 1920px)
+- Maintain consistent code style and documentation
+- Implement proper logging and debugging capabilities
+
+---
+
+### **1. Project Overview**
+
+**HireMe** is a **desktop-only platform** for campus placement, supporting three roles:
+
+1. **Student** - Apply for jobs, build resumes, track applications
+2. **Recruiter** - Post jobs, review applications, shortlist candidates  
+3. **Training & Placement Officer (TnP)** - Approve jobs, manage students, oversee placement process
+
+**Core Business Logic:**
+- Students can only apply to **approved** jobs
+- Only **verified** students can apply for jobs
+- TnP officers can manage students from their college only
+- Recruiters can only manage their own job postings
+- Application deadlines are strictly enforced
+- Placement status affects job application eligibility
+
+**Key Features:**
+
+- **Authentication & Authorization:** Role-based access with JWT
+- **Job Management:** Post → Approve → Apply → Track workflow
+- **Resume Builder:** Multi-section builder with PDF export
+- **Application Tracking:** Real-time status updates with notifications
+- **Student Verification:** TnP-controlled verification process
+- **Analytics Dashboard:** Role-specific metrics and insights
+- **File Management:** Resume uploads and storage
+- **Audit Trail:** Track all major actions and changes
+
+**Design Focus:**
+
+- Desktop-only, fixed-width layout (1024px - 1920px)
+- Font: **Ubuntu (Google Fonts)**
+- Color scheme: white/black + light purple (#A78BFA)
+- Material-UI components for consistency
+- Collapsible sidebar, accordion sections, sticky action buttons
+- Loading states, error handling, and success feedback
+
+---
+
+### **2. Project Folder Structure**
+
+```
+Hire-Me/
+│
+├── BE/                                    # Backend Application
+│   ├── src/
+│   │   ├── config/                       # Configuration files
+│   │   │   ├── database.ts               # MongoDB connection configuration
+│   │   │   ├── env.ts                    # Environment variables validation
+│   │   │   └── constants.ts              # Application constants
+│   │   │
+│   │   ├── models/                       # Mongoose schemas and models
+│   │   │   ├── College.model.ts
+│   │   │   ├── User.model.ts
+│   │   │   ├── Job.model.ts
+│   │   │   ├── Application.model.ts
+│   │   │   ├── Resume.model.ts
+│   │   │   ├── Notification.model.ts
+│   │   │   └── ActivityLog.model.ts
+│   │   │
+│   │   ├── controllers/                  # Request handlers
+│   │   │   ├── auth.controller.ts
+│   │   │   ├── user.controller.ts
+│   │   │   ├── job.controller.ts
+│   │   │   ├── application.controller.ts
+│   │   │   ├── resume.controller.ts
+│   │   │   ├── notification.controller.ts
+│   │   │   ├── college.controller.ts
+│   │   │   └── analytics.controller.ts
+│   │   │
+│   │   ├── routes/                       # API route definitions
+│   │   │   ├── auth.routes.ts
+│   │   │   ├── user.routes.ts
+│   │   │   ├── job.routes.ts
+│   │   │   ├── application.routes.ts
+│   │   │   ├── resume.routes.ts
+│   │   │   ├── notification.routes.ts
+│   │   │   ├── college.routes.ts
+│   │   │   ├── analytics.routes.ts
+│   │   │   └── index.ts                  # Route aggregator
+│   │   │
+│   │   ├── middleware/                   # Express middleware
+│   │   │   ├── auth.middleware.ts        # JWT authentication
+│   │   │   ├── roleCheck.middleware.ts   # Role-based authorization
+│   │   │   ├── validation.middleware.ts  # Request validation
+│   │   │   ├── errorHandler.middleware.ts # Global error handling
+│   │   │   ├── rateLimiter.middleware.ts # Rate limiting
+│   │   │   ├── upload.middleware.ts      # File upload handling
+│   │   │   └── logger.middleware.ts      # Request/response logging
+│   │   │
+│   │   ├── validators/                   # Joi validation schemas
+│   │   │   ├── auth.validator.ts
+│   │   │   ├── user.validator.ts
+│   │   │   ├── job.validator.ts
+│   │   │   ├── application.validator.ts
+│   │   │   └── resume.validator.ts
+│   │   │
+│   │   ├── services/                     # Business logic services
+│   │   │   ├── auth.service.ts
+│   │   │   ├── email.service.ts
+│   │   │   ├── notification.service.ts
+│   │   │   ├── file.service.ts
+│   │   │   └── analytics.service.ts
+│   │   │
+│   │   ├── utils/                        # Utility functions
+│   │   │   ├── logger.ts                 # Winston logger configuration
+│   │   │   ├── asyncHandler.ts           # Async error wrapper
+│   │   │   ├── apiResponse.ts            # Standardized API responses
+│   │   │   ├── apiError.ts               # Custom error classes
+│   │   │   ├── jwt.ts                    # JWT utilities
+│   │   │   ├── encryption.ts             # Encryption utilities
+│   │   │   └── helpers.ts                # General helper functions
+│   │   │
+│   │   ├── types/                        # TypeScript type definitions
+│   │   │   ├── express.d.ts              # Express type extensions
+│   │   │   ├── user.types.ts
+│   │   │   ├── job.types.ts
+│   │   │   └── common.types.ts
+│   │   │
+│   │   ├── seeders/                      # Database seeders
+│   │   │   ├── college.seeder.ts
+│   │   │   └── testData.seeder.ts
+│   │   │
+│   │   ├── uploads/                      # File upload directory
+│   │   │   ├── resumes/
+│   │   │   └── avatars/
+│   │   │
+│   │   └── server.ts                     # Application entry point
+│   │
+│   ├── tests/                            # Backend tests
+│   │   ├── unit/
+│   │   │   ├── models/
+│   │   │   ├── controllers/
+│   │   │   └── services/
+│   │   ├── integration/
+│   │   │   └── api/
+│   │   └── setup.ts                      # Test configuration
+│   │
+│   ├── logs/                             # Application logs
+│   │   ├── error.log
+│   │   ├── combined.log
+│   │   └── access.log
+│   │
+│   ├── .env                              # Environment variables
+│   ├── .env.example                      # Environment template
+│   ├── .gitignore                        # Git ignore rules
+│   ├── .eslintrc.json                    # ESLint configuration
+│   ├── .prettierrc                       # Prettier configuration
+│   ├── tsconfig.json                     # TypeScript configuration
+│   ├── package.json                      # Node dependencies
+│   ├── package-lock.json
+│   ├── nodemon.json                      # Nodemon configuration
+│   └── README.md                         # Backend documentation
+│
+├── FE/                                   # Frontend Application
+│   ├── public/
+│   │   ├── favicon.ico
+│   │   ├── logo.png
+│   │   └── index.html
+│   │
+│   ├── src/
+│   │   ├── assets/                       # Static assets
+│   │   │   ├── images/
+│   │   │   ├── icons/
+│   │   │   └── fonts/
+│   │   │
+│   │   ├── components/                   # Reusable components
+│   │   │   ├── common/                   # Common UI components
+│   │   │   │   ├── Header.tsx
+│   │   │   │   ├── Sidebar.tsx
+│   │   │   │   ├── Loader.tsx
+│   │   │   │   ├── ErrorBoundary.tsx
+│   │   │   │   ├── ConfirmDialog.tsx
+│   │   │   │   ├── Breadcrumb.tsx
+│   │   │   │   └── NotificationBell.tsx
+│   │   │   │
+│   │   │   ├── layout/                   # Layout components
+│   │   │   │   ├── MainLayout.tsx
+│   │   │   │   ├── AuthLayout.tsx
+│   │   │   │   └── DashboardLayout.tsx
+│   │   │   │
+│   │   │   ├── forms/                    # Form components
+│   │   │   │   ├── InputField.tsx
+│   │   │   │   ├── SelectField.tsx
+│   │   │   │   ├── DatePicker.tsx
+│   │   │   │   ├── FileUpload.tsx
+│   │   │   │   └── RichTextEditor.tsx
+│   │   │   │
+│   │   │   ├── cards/                    # Card components
+│   │   │   │   ├── JobCard.tsx
+│   │   │   │   ├── StatCard.tsx
+│   │   │   │   └── ApplicationCard.tsx
+│   │   │   │
+│   │   │   └── tables/                   # Table components
+│   │   │       ├── DataTable.tsx
+│   │   │       └── ApplicantsTable.tsx
+│   │   │
+│   │   ├── pages/                        # Page components
+│   │   │   ├── auth/
+│   │   │   │   ├── Login.tsx
+│   │   │   │   ├── Register.tsx
+│   │   │   │   └── ForgotPassword.tsx
+│   │   │   │
+│   │   │   ├── student/
+│   │   │   │   ├── Dashboard.tsx
+│   │   │   │   ├── JobListing.tsx
+│   │   │   │   ├── JobDetails.tsx
+│   │   │   │   ├── MyApplications.tsx
+│   │   │   │   ├── ResumeBuilder.tsx
+│   │   │   │   └── Profile.tsx
+│   │   │   │
+│   │   │   ├── recruiter/
+│   │   │   │   ├── Dashboard.tsx
+│   │   │   │   ├── PostJob.tsx
+│   │   │   │   ├── ManageJobs.tsx
+│   │   │   │   ├── ViewApplicants.tsx
+│   │   │   │   ├── ReviewApplication.tsx
+│   │   │   │   └── Profile.tsx
+│   │   │   │
+│   │   │   ├── tnp/
+│   │   │   │   ├── Dashboard.tsx
+│   │   │   │   ├── ManageStudents.tsx
+│   │   │   │   ├── ApproveJobs.tsx
+│   │   │   │   ├── ViewApplications.tsx
+│   │   │   │   ├── Reports.tsx
+│   │   │   │   └── Profile.tsx
+│   │   │   │
+│   │   │   ├── common/
+│   │   │   │   ├── Notifications.tsx
+│   │   │   │   ├── Settings.tsx
+│   │   │   │   └── NotFound.tsx
+│   │   │   │
+│   │   │   └── index.ts                  # Page exports
+│   │   │
+│   │   ├── features/                     # Feature-based modules
+│   │   │   ├── auth/
+│   │   │   │   ├── authSlice.ts
+│   │   │   │   └── authAPI.ts
+│   │   │   │
+│   │   │   ├── jobs/
+│   │   │   │   ├── jobsSlice.ts
+│   │   │   │   └── jobsAPI.ts
+│   │   │   │
+│   │   │   ├── applications/
+│   │   │   │   ├── applicationsSlice.ts
+│   │   │   │   └── applicationsAPI.ts
+│   │   │   │
+│   │   │   ├── notifications/
+│   │   │   │   ├── notificationsSlice.ts
+│   │   │   │   └── notificationsAPI.ts
+│   │   │   │
+│   │   │   └── users/
+│   │   │       ├── usersSlice.ts
+│   │   │       └── usersAPI.ts
+│   │   │
+│   │   ├── store/                        # Redux store configuration
+│   │   │   ├── store.ts
+│   │   │   ├── rootReducer.ts
+│   │   │   └── apiSlice.ts               # RTK Query base API
+│   │   │
+│   │   ├── hooks/                        # Custom React hooks
+│   │   │   ├── useAuth.ts
+│   │   │   ├── useNotifications.ts
+│   │   │   ├── useDebounce.ts
+│   │   │   └── useLocalStorage.ts
+│   │   │
+│   │   ├── utils/                        # Utility functions
+│   │   │   ├── api.ts                    # Axios configuration
+│   │   │   ├── validators.ts             # Form validators
+│   │   │   ├── formatters.ts             # Data formatters
+│   │   │   ├── constants.ts              # Frontend constants
+│   │   │   └── helpers.ts                # Helper functions
+│   │   │
+│   │   ├── services/                     # API services
+│   │   │   ├── authService.ts
+│   │   │   ├── jobService.ts
+│   │   │   ├── applicationService.ts
+│   │   │   └── resumeService.ts
+│   │   │
+│   │   ├── types/                        # TypeScript types
+│   │   │   ├── user.types.ts
+│   │   │   ├── job.types.ts
+│   │   │   ├── application.types.ts
+│   │   │   └── common.types.ts
+│   │   │
+│   │   ├── theme/                        # Material-UI theme
+│   │   │   ├── theme.ts
+│   │   │   ├── palette.ts
+│   │   │   └── typography.ts
+│   │   │
+│   │   ├── routes/                       # Route configuration
+│   │   │   ├── ProtectedRoute.tsx
+│   │   │   ├── RoleBasedRoute.tsx
+│   │   │   └── routes.tsx
+│   │   │
+│   │   ├── pdf/                          # PDF templates
+│   │   │   ├── ResumeTemplate.tsx
+│   │   │   └── ApplicationTemplate.tsx
+│   │   │
+│   │   ├── App.tsx                       # Root component
+│   │   ├── main.tsx                      # Application entry
+│   │   └── vite-env.d.ts                 # Vite type definitions
+│   │
+│   ├── tests/                            # Frontend tests
+│   │   ├── components/
+│   │   ├── pages/
+│   │   └── setup.ts
+│   │
+│   ├── .env                              # Environment variables
+│   ├── .env.example                      # Environment template
+│   ├── .gitignore                        # Git ignore rules
+│   ├── .eslintrc.json                    # ESLint configuration
+│   ├── .prettierrc                       # Prettier configuration
+│   ├── tsconfig.json                     # TypeScript configuration
+│   ├── tsconfig.node.json                # TypeScript Node config
+│   ├── vite.config.ts                    # Vite configuration
+│   ├── package.json                      # Node dependencies
+│   ├── package-lock.json
+│   ├── index.html                        # HTML entry point
+│   └── README.md                         # Frontend documentation
+│
+├── docs/                                 # Project documentation
+│   ├── api/                              # API documentation
+│   │   ├── authentication.md
+│   │   ├── jobs.md
+│   │   ├── applications.md
+│   │   └── users.md
+│   │
+│   ├── deployment/                       # Deployment guides
+│   │   ├── docker.md
+│   │   ├── production.md
+│   │   └── environment-setup.md
+│   │
+│   ├── user-guides/                      # User documentation
+│   │   ├── student-guide.md
+│   │   ├── recruiter-guide.md
+│   │   └── tnp-guide.md
+│   │
+│   └── database-schema.md                # Database documentation
+│
+├── .git/                                 # Git repository
+├── .gitignore                            # Root gitignore
+├── docker-compose.yml                    # Docker compose configuration
+├── Dockerfile.backend                    # Backend Dockerfile
+├── Dockerfile.frontend                   # Frontend Dockerfile
+├── requirement.txt                       # Project requirements (this file)
+└── README.md                             # Project README
+```
+
+**Folder Structure Explanation:**
+
+- **BE/**: Backend application with Node.js, Express, and TypeScript
+  - Clear separation of concerns (models, controllers, routes, services)
+  - Middleware for authentication, validation, and error handling
+  - Type-safe development with TypeScript
+  
+- **FE/**: Frontend application with React, Vite, and Material-UI
+  - Component-based architecture with reusable components
+  - Feature-based organization for Redux slices and APIs
+  - Role-specific pages for Student, Recruiter, and TnP
+  
+- **docs/**: Comprehensive project documentation
+  - API documentation for all endpoints
+  - Deployment and setup guides
+  - User manuals for each role
+
+---
+
+### **3. Technology Stack**
+
+**Frontend:**
+- **React 18** with TypeScript for type safety
+- **Vite** for fast development and building
+- **React Router v6** for navigation
+- **Redux Toolkit (RTK Query)** for state management and API calls
+- **Material-UI v5** for consistent UI components
+- **React Hook Form** for form handling and validation
+- **@react-pdf/renderer** for PDF generation
+- **Framer Motion** for smooth animations
+- **date-fns** for date manipulation
+
+**Backend:**
+- **Node.js** with TypeScript
+- **Express.js** with security middleware
+- **MongoDB** with connection pooling
+- **Mongoose** for ODM with validation
+- **JWT** for authentication
+- **bcryptjs** for password hashing
+- **multer** for file uploads
+- **cors, helmet, express-rate-limit** for security
+- **winston** for logging
+- **joi** for input validation
+
+**Development Tools:**
+- **ESLint + Prettier** for code formatting
+- **Husky** for pre-commit hooks
+- **Jest + React Testing Library** for testing
+- **Docker** for containerization
+- **nodemon** for development
+
+---
+
+### **3. Database Models (Mongoose Schemas)**
+
+**`College`**
+
+```jsx
+const collegeSchema = new mongoose.Schema({ name: { type: String, required: true, unique: true } });
+
+```
+
+**`User`**
+
+```jsx
+const userSchema = new mongoose.Schema({
+  fullName: { type: String, required: true, trim: true, maxLength: 100 },
+  email: { 
+    type: String, 
+    required: true, 
+    unique: true, 
+    lowercase: true,
+    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Invalid email']
+  },
+  mobileNumber: { 
+    type: String, 
+    required: true,
+    match: [/^\d{10}$/, 'Mobile number must be 10 digits']
+  },
+  password: { type: String, required: true, minLength: 6 },
+  role: { 
+    type: String, 
+    enum: ['Student', 'Recruiter', 'TnP'], 
+    required: true 
+  },
+  profileAvatar: { type: String, default: '' },
+  isActive: { type: Boolean, default: true },
+  lastLogin: { type: Date },
+  
+  // Role-specific embedded documents
+  studentDetails: {
+    courseName: { type: String, required: function() { return this.role === 'Student'; }},
+    college: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: 'College',
+      required: function() { return this.role === 'Student'; }
+    },
+    isVerified: { type: Boolean, default: false },
+    placementStatus: { 
+      type: String, 
+      enum: ['Placed', 'Not Placed'], 
+      default: 'Not Placed'
+    },
+    cgpa: { type: Number, min: 0, max: 10 },
+    yearOfCompletion: { type: Number, min: 2020, max: 2030 },
+    registrationNumber: { type: String, unique: true, sparse: true }
+  },
+  
+  recruiterDetails: {
+    companyName: { type: String, required: function() { return this.role === 'Recruiter'; }},
+    industry: { type: String, required: function() { return this.role === 'Recruiter'; }},
+    designation: { type: String, required: function() { return this.role === 'Recruiter'; }},
+    companyInfo: { type: String, maxLength: 1000 },
+    companyWebsite: { type: String },
+    verificationStatus: { 
+      type: String, 
+      enum: ['Pending', 'Verified', 'Rejected'], 
+      default: 'Pending' 
+    }
+  },
+  
+  tnpDetails: {
+    college: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: 'College',
+      required: function() { return this.role === 'TnP'; }
+    },
+    designation: { type: String, required: function() { return this.role === 'TnP'; }},
+    employeeId: { type: String, unique: true, sparse: true }
+  }
+}, { 
+  timestamps: true,
+  toJSON: { 
+    transform: function(doc, ret) {
+      delete ret.password;
+      return ret;
+    }
+  }
+});
+
+// Indexes for performance
+userSchema.index({ email: 1 });
+userSchema.index({ role: 1 });
+userSchema.index({ 'studentDetails.college': 1 });
+userSchema.index({ 'tnpDetails.college': 1 });
+```
+
+**`Job`**
+
+```jsx
+const jobSchema = new mongoose.Schema({
+  title: { type: String, required: true, trim: true, maxLength: 200 },
+  description: { type: String, required: true, maxLength: 2000 },
+  companyName: { type: String, required: true, trim: true },
+  location: { type: String, required: true },
+  jobType: { 
+    type: String, 
+    enum: ['Full-time', 'Internship', 'Part-time'], 
+    required: true 
+  },
+  designation: { type: String, required: true },
+  skillsRequired: [{ type: String, trim: true }],
+  eligibility: {
+    minCGPA: { type: Number, min: 0, max: 10 },
+    allowedCourses: [{ type: String }],
+    maxBacklogs: { type: Number, default: 0 },
+    yearOfCompletion: [{ type: Number }]
+  },
+  ctc: {
+    min: { type: Number, required: true, min: 0 },
+    max: { type: Number, required: true, min: 0 },
+    currency: { type: String, default: 'INR' }
+  },
+  experienceRequired: { 
+    type: String, 
+    enum: ['Fresher', '0-1 years', '1-2 years', '2+ years'],
+    default: 'Fresher' 
+  },
+  applicationDeadline: { type: Date, required: true },
+  postedBy: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User', 
+    required: true 
+  },
+  approvedBy: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User' 
+  },
+  status: { 
+    type: String, 
+    enum: ['Pending', 'Approved', 'Rejected'], 
+    default: 'Pending' 
+  },
+  
+  // Additional fields for better job management
+  jobCategory: { 
+    type: String, 
+    enum: ['Technical', 'Non-Technical', 'Research', 'Management'] 
+  },
+  workMode: { 
+    type: String, 
+    enum: ['Work from Office', 'Work from Home', 'Hybrid'],
+    default: 'Work from Office'
+  },
+  applicationCount: { type: Number, default: 0 },
+  isActive: { type: Boolean, default: true },
+  rejectionReason: { type: String }, // For TnP feedback
+  
+  // Interview process details
+  interviewProcess: {
+    rounds: [{ 
+      type: String, 
+      description: String,
+      duration: String 
+    }],
+    totalRounds: { type: Number, default: 1 }
+  }
+}, { 
+  timestamps: true 
+});
+
+// Indexes for performance
+jobSchema.index({ status: 1, isActive: 1 });
+jobSchema.index({ postedBy: 1 });
+jobSchema.index({ applicationDeadline: 1 });
+jobSchema.index({ 'eligibility.allowedCourses': 1 });
+```
+
+**`Application`**
+
+```jsx
+const applicationSchema = new mongoose.Schema({
+  jobId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Job', 
+    required: true 
+  },
+  studentId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User', 
+    required: true 
+  },
+  status: { 
+    type: String,
+    enum: ['Applied', 'Under Review', 'Shortlisted', 'Interview Scheduled', 'Accepted', 'Rejected'],
+    default: 'Applied'
+  },
+  
+  // Resume handling
+  resume: {
+    filename: { type: String, required: true },
+    originalName: { type: String, required: true },
+    mimetype: { type: String, required: true },
+    size: { type: Number, required: true },
+    path: { type: String, required: true }, // File storage path
+    uploadedAt: { type: Date, default: Date.now }
+  },
+  
+  // Application tracking
+  appliedAt: { type: Date, default: Date.now },
+  reviewedAt: { type: Date },
+  reviewedBy: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User' 
+  },
+  
+  // Interview details
+  interviewDetails: {
+    scheduledDate: { type: Date },
+    scheduledTime: { type: String },
+    interviewMode: { 
+      type: String, 
+      enum: ['Online', 'Offline', 'Phone'] 
+    },
+    meetingLink: { type: String },
+    venue: { type: String },
+    instructions: { type: String },
+    round: { type: Number, default: 1 }
+  },
+  
+  // Feedback and notes
+  recruiterNotes: { type: String, maxLength: 1000 },
+  rejectionReason: { type: String },
+  
+  // Analytics
+  viewedByRecruiter: { type: Boolean, default: false },
+  viewedAt: { type: Date }
+}, { 
+  timestamps: true 
+});
+
+// Compound index to prevent duplicate applications
+applicationSchema.index({ jobId: 1, studentId: 1 }, { unique: true });
+applicationSchema.index({ studentId: 1, status: 1 });
+applicationSchema.index({ jobId: 1, status: 1 });
+```
+
+**`Resume`**
+
+```jsx
+const resumeSchema = new mongoose.Schema({
+  studentId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User', 
+    unique: true, 
+    required: true 
+  },
+  
+  personalDetails: {
+    name: { type: String, required: true, trim: true },
+    email: { type: String, required: true },
+    phone: { type: String, required: true },
+    linkedin: { type: String },
+    github: { type: String },
+    portfolio: { type: String },
+    address: {
+      street: String,
+      city: String,
+      state: String,
+      pincode: String,
+      country: { type: String, default: 'India' }
+    }
+  },
+  
+  education: [{
+    degree: { type: String, required: true },
+    institution: { type: String, required: true },
+    field: { type: String, required: true },
+    cgpa: { type: Number, min: 0, max: 10 },
+    percentage: { type: Number, min: 0, max: 100 },
+    yearOfCompletion: { type: Number, required: true },
+    achievements: [String]
+  }],
+  
+  skills: {
+    technical: [{ 
+      name: String, 
+      proficiency: { 
+        type: String, 
+        enum: ['Beginner', 'Intermediate', 'Advanced', 'Expert'] 
+      }
+    }],
+    soft: [String],
+    languages: [{ 
+      name: String, 
+      proficiency: { 
+        type: String, 
+        enum: ['Basic', 'Conversational', 'Fluent', 'Native'] 
+      }
+    }]
+  },
+  
+  projects: [{
+    title: { type: String, required: true },
+    description: { type: String, required: true, maxLength: 500 },
+    techUsed: [String],
+    link: String,
+    githubLink: String,
+    startDate: Date,
+    endDate: Date,
+    isOngoing: { type: Boolean, default: false },
+    teamSize: Number,
+    role: String
+  }],
+  
+  experience: [{
+    company: { type: String, required: true },
+    role: { type: String, required: true },
+    startDate: { type: Date, required: true },
+    endDate: Date,
+    isCurrentJob: { type: Boolean, default: false },
+    description: { type: String, maxLength: 1000 },
+    technologies: [String],
+    achievements: [String]
+  }],
+  
+  achievements: [{
+    title: { type: String, required: true },
+    description: { type: String, maxLength: 300 },
+    date: Date,
+    category: { 
+      type: String, 
+      enum: ['Academic', 'Technical', 'Sports', 'Cultural', 'Leadership', 'Other'] 
+    }
+  }],
+  
+  certifications: [{
+    name: { type: String, required: true },
+    issuingOrganization: { type: String, required: true },
+    issueDate: Date,
+    expiryDate: Date,
+    credentialId: String,
+    credentialUrl: String
+  }],
+  
+  // Resume metadata
+  isComplete: { type: Boolean, default: false },
+  lastUpdated: { type: Date, default: Date.now },
+  templateUsed: { type: String, default: 'standard' },
+  
+  // Privacy settings
+  visibility: {
+    public: { type: Boolean, default: false },
+    recruitersOnly: { type: Boolean, default: true }
+  }
+}, { 
+  timestamps: true 
+});
+
+resumeSchema.index({ studentId: 1 });
+```
+
+**`Notification`**
+
+```jsx
+const notificationSchema = new mongoose.Schema({
+  recipient: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User', 
+    required: true 
+  },
+  title: { type: String, required: true, maxLength: 100 },
+  message: { type: String, required: true, maxLength: 500 },
+  type: { 
+    type: String, 
+    enum: ['Job', 'Application', 'System', 'Reminder'], 
+    required: true 
+  },
+  priority: { 
+    type: String, 
+    enum: ['Low', 'Medium', 'High', 'Urgent'], 
+    default: 'Medium' 
+  },
+  isRead: { type: Boolean, default: false },
+  readAt: { type: Date },
+  link: { type: String }, // Deep link to relevant page
+  
+  // Metadata for different notification types
+  metadata: {
+    jobId: { type: mongoose.Schema.Types.ObjectId, ref: 'Job' },
+    applicationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Application' },
+    senderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+  },
+  
+  // Delivery tracking
+  deliveryStatus: { 
+    type: String, 
+    enum: ['Pending', 'Delivered', 'Failed'], 
+    default: 'Pending' 
+  },
+  deliveredAt: { type: Date },
+  
+  // Auto-cleanup
+  expiresAt: { 
+    type: Date, 
+    default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
+  }
+}, { 
+  timestamps: true 
+});
+
+notificationSchema.index({ recipient: 1, isRead: 1 });
+notificationSchema.index({ recipient: 1, type: 1 });
+notificationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+```
+
+**`ActivityLog`** (New - For audit trail)
+
+```jsx
+const activityLogSchema = new mongoose.Schema({
+  userId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User', 
+    required: true 
+  },
+  action: { 
+    type: String, 
+    required: true,
+    enum: [
+      'USER_LOGIN', 'USER_LOGOUT', 'USER_REGISTER',
+      'JOB_CREATE', 'JOB_UPDATE', 'JOB_DELETE', 'JOB_APPROVE', 'JOB_REJECT',
+      'APPLICATION_SUBMIT', 'APPLICATION_UPDATE', 'APPLICATION_WITHDRAW',
+      'RESUME_CREATE', 'RESUME_UPDATE',
+      'STUDENT_VERIFY', 'STUDENT_UNVERIFY',
+      'PROFILE_UPDATE', 'PASSWORD_CHANGE'
+    ]
+  },
+  entityType: { 
+    type: String, 
+    enum: ['User', 'Job', 'Application', 'Resume', 'Notification'] 
+  },
+  entityId: { type: mongoose.Schema.Types.ObjectId },
+  details: { type: Object }, // Additional action details
+  ipAddress: { type: String },
+  userAgent: { type: String },
+  timestamp: { type: Date, default: Date.now }
+}, { 
+  timestamps: false // Using custom timestamp field
+});
+
+activityLogSchema.index({ userId: 1, timestamp: -1 });
+activityLogSchema.index({ action: 1, timestamp: -1 });
+activityLogSchema.index({ entityType: 1, entityId: 1 });
+```
+
+---
+
+### **4. REST API Design**
+
+**API Standards:**
+- RESTful conventions with proper HTTP status codes
+- JSON request/response format
+- JWT token authentication via Authorization header
+- Request validation using Joi schemas
+- Rate limiting: 100 requests per 15 minutes per IP
+- CORS enabled for frontend domain
+- Request/Response logging with Winston
+- Error handling with consistent error response format
+
+**Error Response Format:**
+```json
+{
+  "success": false,
+  "error": {
+    "message": "Error description",
+    "code": "ERROR_CODE",
+    "details": {}, // Additional error details
+    "timestamp": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
+**Success Response Format:**
+```json
+{
+  "success": true,
+  "data": {}, // Response data
+  "message": "Operation successful", // Optional
+  "pagination": { // For paginated responses
+    "page": 1,
+    "limit": 10,
+    "total": 100,
+    "totalPages": 10
+  }
+}
+```
+
+---
+
+**Authentication (`/api/auth`)**
+
+- `POST /register` → Role-based signup with email validation
+  - Body: `{ fullName, email, mobileNumber, password, role, roleDetails }`
+  - Validation: Email uniqueness, password strength, role-specific required fields
+  - Response: User data (without password) + JWT token
+  
+- `POST /login` → Email/password authentication  
+  - Body: `{ email, password }`
+  - Response: User data + JWT token + lastLogin update
+  - Rate limit: 5 attempts per 15 minutes per IP
+  
+- `POST /logout` → Invalidate current session
+  - Headers: Authorization Bearer token
+  - Response: Success confirmation
+  
+- `GET /verify-token` → Validate current JWT token
+  - Headers: Authorization Bearer token
+  - Response: User data if token valid
+
+**Users (`/api/users`)**
+
+- `GET /me` → Current user profile with populated references
+  - Headers: Authorization Bearer token
+  - Response: Full user profile with college info
+  
+- `PUT /me` → Update profile (role-specific validation)
+  - Body: Partial user object
+  - Validation: Role-based field restrictions
+  - Response: Updated user data
+  
+- `PUT /change-password` → Update password with current password verification
+  - Body: `{ currentPassword, newPassword }`
+  - Validation: Current password verification, new password strength
+  
+- `GET /students` → TnP only, list students from same college
+  - Query: `?page=1&limit=10&search=name&course=CS&verified=true&placement=Placed`
+  - Authorization: TnP role only
+  - Response: Paginated student list with filters
+  
+- `PUT /students/:id/verify` → TnP only, toggle student verification
+  - Params: Student user ID
+  - Authorization: TnP role, same college only
+  - Body: `{ isVerified: boolean, reason?: string }`
+  
+- `DELETE /students/:id` → TnP only, deactivate student account
+  - Authorization: TnP role, same college only
+  - Soft delete: Sets isActive to false
+
+**Colleges (`/api/colleges`)**
+
+- `GET /` → List all colleges with caching
+  - Query: `?search=name&page=1&limit=50`
+  - Response: Paginated college list
+  - Cache: 24 hours TTL
+
+**Jobs (`/api/jobs`)**
+
+- `POST /` → Recruiter creates job posting
+  - Body: Complete job object
+  - Validation: Deadline in future, CTC range validation, eligibility criteria
+  - Authorization: Recruiter role only
+  - Response: Created job with Pending status
+  
+- `GET /` → Role-based job listing with filtering
+  - Query: `?page=1&limit=10&status=Approved&jobType=Full-time&location=Delhi&search=developer&minCTC=500000&maxCTC=1000000&deadline=upcoming`
+  - Student: Only approved, active jobs with valid deadlines
+  - Recruiter: Own jobs only
+  - TnP: All jobs from own college's students' applications
+  - Response: Paginated job list with application counts
+  
+- `GET /:id` → Job details with applicant count
+  - Params: Job ID
+  - Authorization: Role-based visibility
+  - Response: Complete job details + applicant statistics
+  
+- `PUT /:id` → Recruiter updates own job (only if Pending/Rejected)
+  - Authorization: Recruiter role, job owner only, job not approved
+  - Body: Partial job object
+  - Validation: Cannot modify after approval
+  
+- `DELETE /:id` → Soft delete job
+  - Authorization: Recruiter (own jobs) or TnP
+  - Restriction: Cannot delete if applications exist
+  
+- `PUT /:id/approve` → TnP approves job
+  - Authorization: TnP role only
+  - Body: `{ approvalNotes?: string }`
+  - Side effect: Notify recruiter, make job visible to students
+  
+- `PUT /:id/reject` → TnP rejects job  
+  - Authorization: TnP role only
+  - Body: `{ rejectionReason: string }`
+  - Side effect: Notify recruiter
+
+**Applications (`/api/applications`)**
+
+- `POST /apply/:jobId` → Student applies with resume upload
+  - Params: Job ID
+  - Body: FormData with resume file + application details
+  - Validation: Job approved, deadline not passed, student verified, not already applied, placement status check
+  - File: PDF resume, max 5MB
+  - Side effect: Increment job application count, notify recruiter
+  
+- `GET /my-applications` → Student's application history
+  - Query: `?page=1&limit=10&status=Applied&sortBy=appliedAt&order=desc`
+  - Authorization: Student role only
+  - Response: Paginated applications with job details
+  
+- `GET /job/:jobId/applications` → Recruiter/TnP view applicants
+  - Authorization: Recruiter (own jobs) or TnP
+  - Query: `?page=1&limit=10&status=Applied&cgpa=7&skills=JavaScript&sortBy=appliedAt`
+  - Response: Applicant list with resume access links
+  
+- `PUT /:applicationId/status` → Recruiter updates application status
+  - Authorization: Recruiter (own job applications) only
+  - Body: `{ status, recruiterNotes?, interviewDetails? }`
+  - Validation: Valid status transitions only
+  - Side effect: Notify student
+  
+- `DELETE /:applicationId` → Student withdraws application
+  - Authorization: Student (own applications) only
+  - Restriction: Only if status is 'Applied'
+
+**Resume (`/api/resume`)**
+
+- `GET /` → Student fetch own resume
+  - Authorization: Student role only
+  - Response: Complete resume object
+  
+- `POST /` → Student create resume
+  - Authorization: Student role only  
+  - Body: Complete resume object
+  - Validation: Comprehensive resume validation
+  
+- `PUT /` → Student update resume
+  - Body: Partial resume object  
+  - Validation: Maintain data integrity
+  
+- `GET /pdf` → Generate and download resume PDF
+  - Authorization: Student role only
+  - Query: `?template=modern|classic|minimal`
+  - Response: PDF file stream
+  
+- `GET /:studentId` → View student resume (Recruiter/TnP)
+  - Authorization: Recruiter (for applicants only) or TnP
+  - Response: Student resume data
+
+**Notifications (`/api/notifications`)**
+
+- `GET /` → Fetch user notifications  
+  - Query: `?page=1&limit=20&type=Job&isRead=false&priority=High`
+  - Authorization: Any authenticated user
+  - Response: Paginated notifications list
+  
+- `PUT /:id/read` → Mark single notification as read
+  - Authorization: Notification recipient only
+  
+- `PUT /mark-all-read` → Mark all user notifications as read
+  - Authorization: Any authenticated user
+  
+- `DELETE /:id` → Delete notification
+  - Authorization: Notification recipient only
+
+**Analytics (`/api/analytics`)**
+
+- `GET /dashboard` → Role-based dashboard metrics
+  - Student: Applications count, interview scheduled, placement status
+  - Recruiter: Jobs posted, applications received, hire rate
+  - TnP: Students count, placement rate, job approval statistics
+  - Authorization: All authenticated users
+  
+- `GET /reports` → Generate detailed reports (TnP only)
+  - Query: `?type=placement|recruitment&startDate=2024-01-01&endDate=2024-12-31&format=json|csv`
+  - Authorization: TnP role only
+
+**File Management (`/api/files`)**
+
+---
+
+### **5. UI/UX Design (Material-UI, Desktop Only)**
+
+**Design System:**
+- **Breakpoints:** 1024px (min) to 1920px (max width)
+- **Typography:** Ubuntu font family from Google Fonts
+- **Color Palette:**
+  - Primary: Light Purple (#A78BFA)
+  - Secondary: Deep Purple (#7C3AED) 
+  - Background: White (#FFFFFF)
+  - Surface: Light Gray (#F8FAFC)
+  - Text: Dark Gray (#1F2937)
+  - Success: Green (#10B981)
+  - Warning: Amber (#F59E0B)
+  - Error: Red (#EF4444)
+- **Spacing:** Material-UI 8px grid system
+- **Border Radius:** 8px for cards, 4px for buttons
+- **Shadows:** Material-UI elevation system
+
+**Global Components:**
+
+**Header Component:**
+- Fixed top header with elevation
+- Left: HireMe logo + sidebar toggle button
+- Center: Page title with breadcrumb navigation
+- Right: Notification bell (with unread count badge) + profile avatar + role chip + theme toggle
+- Background: White with subtle shadow
+- Height: 64px
+
+**Sidebar Component:**
+- Collapsible vertical navigation (250px expanded, 70px collapsed)
+- Role-based menu items with icons
+- Active item highlighting with purple accent
+- Smooth expand/collapse animation
+- Bottom: User profile summary (when expanded)
+
+**Page Layout:**
+- Header (64px) + Sidebar (250px/70px) + Main content area
+- Main content: Max width 1200px, centered, 24px padding
+- Consistent page headers with action buttons
+- Loading states with Material-UI Skeleton components
+
+---
+
+**Authentication Pages**
+
+**Login Page:**
+- Centered card (400px width) on full-screen background
+- Form fields: Email, Password with proper validation
+- Material-UI TextField with floating labels
+- Login button with loading spinner during authentication
+- "Remember me" checkbox
+- Role-based redirect after successful login
+- Error messages inline below fields
+- Footer link: "Don't have an account? Sign up"
+
+**Signup Page:**
+- Multi-step wizard (3 steps) with stepper indicator
+- Step 1: Basic info (Name, Email, Mobile, Password)
+- Step 2: Role selection with cards
+- Step 3: Role-specific details form
+- Form validation with real-time feedback
+- Progress indicator at top
+- Next/Previous/Submit buttons
+- Field validation before allowing next step
+- Success confirmation with auto-redirect
+
+---
+
+**Dashboard Components**
+
+**Student Dashboard:**
+- Overview cards: Applications sent, Interviews scheduled, Job alerts, Profile completion
+- Quick actions: Apply to jobs, Update resume, View applications
+- Recent activities feed
+- Recommended jobs carousel
+- Application status timeline
+
+**Recruiter Dashboard:**
+- Overview cards: Jobs posted, Applications received, Candidates shortlisted, Active jobs
+- Quick actions: Post new job, Review applications, View analytics
+- Recent applications table
+- Job performance metrics charts
+- Hiring pipeline visualization
+
+**TnP Dashboard:**
+- Overview cards: Total students, Verified students, Placement rate, Active jobs
+- Quick actions: Verify students, Approve jobs, Generate reports
+- Placement statistics charts
+- Student verification queue
+- College placement analytics
+
+---
+
+**Job Management**
+
+**Job Listing Page:**
+- Filter sidebar: Job type, Location, CTC range, Company, Skills, Deadline
+- Grid layout: 3 cards per row (4 when sidebar collapsed)
+- Job cards: Company logo, Title, Location, CTC, Skills tags, Application deadline
+- Status chips: Pending (orange), Approved (green), Rejected (red)
+- Sort options: Latest, Deadline, CTC, Applications
+- Load more pagination with smooth scrolling
+- Search bar with autocomplete
+
+**Job Details Page:**
+- Split layout: Job details (70%) + Application panel (30%)
+- Comprehensive job information with sections
+- Application requirements clearly highlighted
+- Company information card
+- Similar jobs suggestions
+- Student: Apply button (disabled if not eligible)
+- Recruiter: Edit/Delete buttons (if owner)
+- TnP: Approve/Reject buttons with reason dialog
+
+**Post Job Page:**
+- Multi-section form with accordion layout
+- Real-time form validation
+- Auto-save draft functionality
+- Preview mode before submission
+- Sticky submit button
+- Field help text and tooltips
+- Success notification with job ID
+
+---
+
+**Application Management**
+
+**My Applications (Student):**
+- Application cards with timeline view
+- Status indicators with color coding
+- Filter by status, date range, company
+- Interview details prominently displayed
+- Download application PDF option
+- Withdraw application option (when applicable)
+
+**Applicants Table (Recruiter/TnP):**
+- DataGrid with sorting, filtering, pagination
+- Columns: Photo, Name, College, CGPA, Skills, Status, Actions
+- Expandable rows for quick student details
+- Bulk actions for status updates
+- Export applicant list to CSV
+- Resume download with one click
+- Advanced filters: CGPA range, skills, course
+
+**Application Review Panel:**
+- Student profile summary
+- Resume preview with download option
+- Application timeline
+- Interview scheduling interface
+- Status update with notes
+- Previous recruiter feedback
+
+---
+
+**Resume Builder**
+
+**Resume Form:**
+- Multi-section accordion interface
+- Sections: Personal, Education, Skills, Projects, Experience, Achievements
+- Auto-save on field blur
+- Section completion indicators
+- Drag-and-drop for reordering items
+- Rich text editor for descriptions
+- Skills autocomplete from database
+- PDF preview panel (live update)
+
+**Resume Templates:**
+- Template selector with previews
+- Modern, Classic, Minimal designs
+- Template customization options
+- Color scheme selection
+- Export options: PDF, JSON
+
+---
+
+**Profile Management**
+
+**My Profile Page:**
+- Role-specific tabbed interface
+- Personal Information tab
+- Role details tab (Student: Academic, Recruiter: Company, TnP: College)
+- Account settings tab
+- Activity log tab
+- Change password section
+- Profile picture upload with cropping
+- Data export options
+
+---
+
+**Notifications System**
+
+**Notification Bell:**
+- Unread count badge
+- Dropdown with recent 10 notifications
+- Mark as read functionality
+- Click to navigate to relevant page
+- Real-time updates (polling every 30 seconds)
+
+**Notifications Page:**
+- Grouped by date (Today, Yesterday, This week)
+- Filter by type, read status
+- Mark all as read button
+- Delete option for old notifications
+- Pagination for large lists
+
+---
+
+**General UI Guidelines**
+
+**Loading States:**
+- Skeleton loaders for content areas
+- Button loading spinners
+- Progress bars for file uploads
+- Page-level loading overlay for navigation
+
+**Error Handling:**
+- Toast notifications for success/error messages
+- Inline field validation errors
+- Empty states with helpful illustrations
+- 404/403 error pages with navigation options
+
+**Responsive Behavior:**
+- Fixed desktop layout (no mobile breakpoints)
+- Optimal viewing on 1024px to 1920px screens
+- Sidebar collapse on smaller desktop screens
+- Font scaling based on screen resolution
+
+**Accessibility:**
+- Proper ARIA labels and roles
+- Keyboard navigation support
+- High contrast color ratios
+- Screen reader friendly content
+- Focus indicators on interactive elements
+
+**Interactive Elements:**
+- Hover states for clickable items
+- Active states for buttons and links
+- Smooth transitions and animations
+- Feedback for user actions
+- Confirmation dialogs for destructive actions
+
+- Columns: Name, Email, CGPA, Skills, Status, Actions
+- Recruiter Actions: Select/Reject/Shortlist
+- TnP Actions: Read-only, highlight shortlisted
+- Filters/search: Branch, CGPA, skills
+
+**My Details Page**
+
+- Student: Personal, Academic, Skills, Certifications, Projects, Resume, Change Password
+- TnP: Personal, Activity Logs, Change Password
+- Recruiter: Personal, Company Info, Job History, Change Password
+- Accordion/collapsible sections
+
+**Resume Builder**
+
+- Multi-step: Personal, Education, Skills, Projects, Experience, Achievements
+- Save per section, generate PDF
+- Inline validation, accordion UI
+
+**Post & Manage Jobs**
+
+- Sticky submit button, Pending default
+- Tables: View/Edit/Delete (Recruiter), Approve/Reject (TnP)
+- Confirmation modals
+
+**Notifications**
+
+- Bell icon with unread count
+- Dropdown/modal listing notifications
+- Mark as read
+
+**General Guidelines**
+
+- Desktop-only, fixed width
+- Sticky action buttons
+- Inline validation & confirmation modals
+- Collapsible sections, consistent spacing, typography, and color-coded status chips
+
+---
+
+### **6. Agentic Development Instructions**
+
+**Development Phases (Sequential Implementation):**
+
+---
+
+**Phase 1: Backend Foundation (Week 1-2)**
+
+1. **Project Setup & Architecture**
+   - Initialize Node.js project with TypeScript
+   - Set up folder structure: `/src/models`, `/src/routes`, `/src/middleware`, `/src/utils`, `/src/config`
+   - Configure environment variables (.env files)
+   - Set up ESLint, Prettier, and Git hooks
+   - Initialize package.json with all required dependencies
+
+2. **Database & Models**
+   - MongoDB connection with connection pooling
+   - Implement all Mongoose schemas with validations and indexes
+   - Create database seeders for colleges and test data
+   - Set up MongoDB indexes for performance optimization
+   - Implement database backup and migration strategies
+
+3. **Authentication & Security**
+   - JWT token generation and validation middleware
+   - Password hashing with bcryptjs
+   - Role-based authorization middleware
+   - Rate limiting and CORS configuration
+   - Input validation with Joi schemas
+   - Security headers with Helmet
+
+4. **Core API Development**
+   - Implement all REST endpoints with proper error handling
+   - Request/response logging with Winston
+   - API documentation with Swagger/OpenAPI
+   - File upload handling with Multer
+   - Email service integration (if needed)
+
+5. **Testing & Documentation**
+   - Unit tests for all models and utilities
+   - Integration tests for API endpoints
+   - API documentation generation
+   - Error handling and logging verification
+
+---
+
+**Phase 2: Frontend Foundation (Week 3-4)**
+
+1. **React Application Setup**
+   - Vite + React 18 + TypeScript project setup
+   - Material-UI theme configuration with custom colors
+   - Redux Toolkit store configuration
+   - React Router v6 setup with protected routes
+   - Google Fonts (Ubuntu) integration
+
+2. **Authentication Flow**
+   - Login/Signup components with form validation
+   - JWT token storage and automatic refresh
+   - Protected route component
+   - Role-based component rendering
+   - Auth context and hooks
+
+3. **Core Layout Components**
+   - Header component with navigation
+   - Sidebar component with role-based menus
+   - Layout wrapper component
+   - Loading components and error boundaries
+   - Theme provider and dark mode toggle
+
+4. **State Management**
+   - RTK Query API slice configuration
+   - Auth slice with user state management
+   - Notification slice for UI notifications
+   - Persistent state with Redux Persist
+   - Type-safe API hooks generation
+
+---
+
+**Phase 3: Core Features Implementation (Week 5-8)**
+
+1. **Student Module**
+   - Student dashboard with overview cards
+   - Job listing page with filters and search
+   - Job details page with application functionality
+   - My Applications page with status tracking
+   - Resume builder with multi-step form
+   - Profile management page
+
+2. **Recruiter Module**
+   - Recruiter dashboard with job statistics
+   - Post job form with validation
+   - Job management page (edit/delete)
+   - Applicants table with filtering
+   - Application review interface
+   - Company profile management
+
+3. **TnP Module**
+   - TnP dashboard with college statistics
+   - Student management with verification
+   - Job approval workflow
+   - Placement reports and analytics
+   - Bulk operations interface
+   - College settings management
+
+4. **Resume System**
+   - Resume builder with section management
+   - PDF generation with @react-pdf/renderer
+   - Template selection and customization
+   - Resume preview and download
+   - Resume sharing with recruiters
+
+---
+
+**Phase 4: Advanced Features (Week 9-10)**
+
+1. **Notification System**
+   - Real-time notification fetching
+   - Notification center with filtering
+   - Email notification service
+   - Push notification setup (optional)
+   - Notification preferences
+
+2. **File Management**
+   - Resume upload and storage
+   - File validation and security
+   - CDN integration for file serving
+   - File backup and recovery
+   - Image optimization for avatars
+
+3. **Analytics & Reporting**
+   - Dashboard analytics for all roles
+   - Placement reports generation
+   - Data visualization with charts
+   - Export functionality (PDF/CSV)
+   - Performance metrics tracking
+
+4. **Search & Filtering**
+   - Advanced job search with Elasticsearch (optional)
+   - Student search for recruiters
+   - Global search functionality
+   - Filter persistence and sharing
+   - Search analytics
+
+---
+
+**Phase 5: Testing & Optimization (Week 11-12)**
+
+1. **Comprehensive Testing**
+   - Unit tests for all components
+   - Integration tests for user workflows
+   - E2E testing with Playwright
+   - Performance testing and optimization
+   - Security testing and vulnerability assessment
+
+2. **Performance Optimization**
+   - Code splitting and lazy loading
+   - Image optimization and caching
+   - Database query optimization
+   - Bundle size optimization
+   - Memory leak prevention
+
+3. **Production Deployment**
+   - Docker containerization
+   - Environment configuration
+   - Database backup strategy
+   - Monitoring and logging setup
+   - Error tracking with Sentry
+
+4. **Documentation & Handover**
+   - Complete API documentation
+   - Frontend component documentation
+   - Deployment and maintenance guides
+   - User manuals for each role
+   - Video tutorials creation
+
+---
+
+**Implementation Guidelines:**
+
+**Code Quality Standards:**
+- TypeScript for type safety throughout
+- Consistent naming conventions (camelCase for variables, PascalCase for components)
+- JSDoc comments for all functions and components
+- Error boundaries for React components
+- Proper error handling with try-catch blocks
+- Logging for all important operations
+
+**Security Best Practices:**
+- Input sanitization for all user inputs
+- SQL injection prevention with parameterized queries
+- XSS protection with proper data encoding
+- CSRF protection with tokens
+- Secure file upload validation
+- Regular security audits
+
+**Performance Guidelines:**
+- Implement proper caching strategies
+- Use React.memo for expensive components
+- Implement virtual scrolling for large lists
+- Optimize database queries with proper indexes
+- Use CDN for static assets
+- Implement proper error retry mechanisms
+
+**Testing Strategy:**
+- 80%+ code coverage requirement
+- Test all critical user workflows
+- Mock external dependencies
+- Test error scenarios and edge cases
+- Performance benchmark testing
+- Accessibility testing
+
+**Deployment Checklist:**
+- Environment variables configuration
+- Database migration scripts
+- SSL certificate setup
+- Domain configuration
+- Backup procedures
+- Monitoring dashboards
+- Health check endpoints
+
+**Maintenance Procedures:**
+- Regular dependency updates
+- Security patch management
+- Database maintenance scripts
+- Log rotation and cleanup
+- Performance monitoring
+- User feedback collection
+
+---
+
+**Key Integration Points:**
+
+1. **Job Application Workflow:**
+   ```
+   Student applies → Recruiter reviews → Status updates → Notifications sent
+   ```
+
+2. **Job Approval Workflow:**
+   ```
+   Recruiter posts → TnP reviews → Approval/Rejection → Student visibility
+   ```
+
+3. **Student Verification Workflow:**
+   ```
+   Student registers → TnP verifies → Application permissions granted
+   ```
+
+4. **Resume Generation Workflow:**
+   ```
+   Student fills form → PDF generation → Storage → Recruiter access
+   ```
+
+**Success Metrics:**
+- Page load times < 2 seconds
+- API response times < 500ms
+- Zero critical security vulnerabilities
+- 99.9% uptime target
+- User satisfaction > 4.5/5
+- Bug resolution time < 24 hours
+
+---
+
+### **7. Technical Specifications & Edge Cases**
+
+**Business Logic Constraints:**
+
+1. **Application Rules:**
+   - Students can only apply to approved jobs
+   - Application deadline must be in the future
+   - Students must be verified by TnP to apply
+   - Students with "Placed" status cannot apply to new jobs
+   - Maximum 1 application per job per student
+   - Resume file size limit: 5MB, PDF format only
+
+2. **Job Management Rules:**
+   - Recruiters can only edit jobs in "Pending" or "Rejected" status
+   - Jobs cannot be deleted if they have applications
+   - Job approval automatically makes job visible to eligible students
+   - Application deadline cannot be extended once applications exist
+   - CTC range must be valid (min <= max)
+
+3. **User Management Rules:**
+   - Email addresses must be unique across all roles
+   - TnP officers can only manage students from their college
+   - Student verification is required for job applications
+   - Password changes require current password verification
+   - Account deactivation is soft delete (preserves data)
+
+4. **Notification Rules:**
+   - Notifications expire after 30 days
+   - Maximum 50 unread notifications per user
+   - Notification delivery follows user preferences
+   - Critical notifications cannot be disabled
+
+**Error Handling Scenarios:**
+
+1. **File Upload Errors:**
+   - Invalid file format rejection
+   - File size limit exceeded
+   - Corrupted file detection
+   - Virus scanning integration
+   - Storage quota management
+
+2. **Database Connection Issues:**
+   - Connection timeout handling
+   - Automatic retry mechanisms
+   - Fallback read-only mode
+   - Data consistency checks
+   - Transaction rollback procedures
+
+3. **API Rate Limiting:**
+   - Progressive rate limiting by endpoint
+   - User-specific rate limits
+   - Graceful degradation during high load
+   - Priority queuing for critical operations
+   - Rate limit bypass for admin users
+
+4. **Authentication Edge Cases:**
+   - Token expiration handling
+   - Multiple session management
+   - Password reset security
+   - Account lockout after failed attempts
+   - Role change implications
+
+**Performance Optimization:**
+
+1. **Database Optimization:**
+   - Compound indexes for complex queries
+   - Query result caching with Redis
+   - Connection pooling optimization
+   - Aggregation pipeline optimization
+   - Database query monitoring
+
+2. **Frontend Optimization:**
+   - Component lazy loading
+   - Image optimization and WebP support
+   - Bundle splitting by routes
+   - Service worker for offline functionality
+   - Memory leak prevention
+
+3. **API Optimization:**
+   - Response compression with gzip
+   - API endpoint caching strategies
+   - Pagination for large datasets
+   - Parallel request optimization
+   - Request deduplication
+
+**Security Implementations:**
+
+1. **Data Protection:**
+   - Personal data encryption at rest
+   - Secure file storage with access controls
+   - Data anonymization for analytics
+   - GDPR compliance measures
+   - Data retention policies
+
+2. **Access Control:**
+   - Role-based permissions matrix
+   - Resource-level authorization
+   - API endpoint protection
+   - Cross-origin request validation
+   - Input sanitization and validation
+
+3. **Audit Trail:**
+   - All user actions logged
+   - Data modification tracking
+   - Security event monitoring
+   - Compliance reporting
+   - Forensic data preservation
+
+**Scalability Considerations:**
+
+1. **Horizontal Scaling:**
+   - Stateless API design
+   - Database sharding strategies
+   - Load balancer configuration
+   - CDN integration for static assets
+   - Microservices migration path
+
+2. **Vertical Scaling:**
+   - Resource monitoring and alerting
+   - Automatic scaling policies
+   - Performance bottleneck identification
+   - Capacity planning procedures
+   - Cost optimization strategies
+
+**Monitoring & Alerting:**
+
+1. **Application Monitoring:**
+   - Real-time performance metrics
+   - Error rate tracking
+   - User activity analytics
+   - Business metrics dashboard
+   - Automated alert notifications
+
+2. **Infrastructure Monitoring:**
+   - Server health monitoring
+   - Database performance tracking
+   - Network latency monitoring
+   - Storage usage alerts
+   - Security breach detection
+
+**Backup & Recovery:**
+
+1. **Data Backup:**
+   - Daily automated database backups
+   - File storage backup procedures
+   - Cross-region backup replication
+   - Backup integrity verification
+   - Point-in-time recovery capability
+
+2. **Disaster Recovery:**
+   - Recovery time objectives (RTO < 4 hours)
+   - Recovery point objectives (RPO < 1 hour)
+   - Failover procedures documentation
+   - Regular disaster recovery testing
+   - Business continuity planning
+
+**Future Enhancement Roadmap:**
+
+1. **Phase 2 Features:**
+   - Mobile application development
+   - Advanced analytics and ML recommendations
+   - Video interview integration
+   - Skills assessment platform
+   - Alumni network features
+
+2. **Phase 3 Features:**
+   - Multi-college support
+   - International placement opportunities
+   - AI-powered resume optimization
+   - Blockchain certification verification
+   - Advanced reporting and BI tools
+
+---
+
+### **8. Final Development Notes**
+
+**Code Organization:**
+- Maintain clear separation of concerns
+- Use dependency injection for testability
+- Implement proper abstraction layers
+- Follow SOLID principles
+- Maintain consistent code style
+
+**Documentation Requirements:**
+- Inline code documentation
+- API endpoint documentation
+- Database schema documentation
+- Deployment procedures
+- User training materials
+
+**Quality Assurance:**
+- Code review process for all changes
+- Automated testing pipeline
+- Performance regression testing
+- Security vulnerability scanning
+- User acceptance testing
+
+**Version Control:**
+- Feature branch workflow
+- Semantic versioning
+- Release notes documentation
+- Rollback procedures
+- Change log maintenance
+
+This enhanced requirements document provides a comprehensive foundation for building the HireMe platform with production-ready quality, security, and scalability considerations.
