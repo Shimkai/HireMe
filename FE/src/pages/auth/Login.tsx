@@ -1,16 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import {
-  Container,
-  Paper,
-  TextField,
-  Button,
-  Typography,
-  Box,
-  Alert,
-  Link,
-} from '@mui/material';
+import { Container, Paper, TextField, Button, Typography, Box, Alert, Link } from '@mui/material';
 import { authService } from '../../services/authService';
 import { setCredentials } from '../../features/auth/authSlice';
 
@@ -109,4 +100,3 @@ const Login = () => {
 };
 
 export default Login;
-
