@@ -22,11 +22,14 @@ interface IInterviewDetails {
 export interface IApplication extends Document {
   jobId: mongoose.Types.ObjectId;
   studentId: mongoose.Types.ObjectId;
-  status: 'Applied' | 'Under Review' | 'Shortlisted' | 'Interview Scheduled' | 'Accepted' | 'Rejected';
+  status: 'Applied' | 'Under Review' | 'Shortlisted' | 'Interview Scheduled' | 'Offered' | 'Accepted' | 'Rejected' | 'Withdrawn';
   resume: IResume;
   appliedAt: Date;
   reviewedAt?: Date;
   reviewedBy?: mongoose.Types.ObjectId;
+  shortlistedAt?: Date;
+  offeredAt?: Date;
+  withdrawnAt?: Date;
   interviewDetails?: IInterviewDetails;
   recruiterNotes?: string;
   rejectionReason?: string;
@@ -50,7 +53,7 @@ const applicationSchema = new Schema<IApplication>(
     },
     status: {
       type: String,
-      enum: ['Applied', 'Under Review', 'Shortlisted', 'Interview Scheduled', 'Accepted', 'Rejected'],
+      enum: ['Applied', 'Under Review', 'Shortlisted', 'Interview Scheduled', 'Offered', 'Accepted', 'Rejected', 'Withdrawn'],
       default: 'Applied',
     },
     resume: {
@@ -89,6 +92,15 @@ const applicationSchema = new Schema<IApplication>(
     reviewedBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',
+    },
+    shortlistedAt: {
+      type: Date,
+    },
+    offeredAt: {
+      type: Date,
+    },
+    withdrawnAt: {
+      type: Date,
     },
     interviewDetails: {
       scheduledDate: {

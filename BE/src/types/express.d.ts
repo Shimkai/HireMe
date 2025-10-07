@@ -10,5 +10,6 @@ declare global {
   }
 }
 
-// This export is required to make this a module
+// Ensure this file is treated as a module
 export {};
+

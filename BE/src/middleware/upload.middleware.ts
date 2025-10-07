@@ -1,15 +1,26 @@
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
 import { ApiError } from '../utils/apiError';
 import { config } from '../config/env';
 
 // Storage configuration
 const storage = multer.diskStorage({
   destination: (_req, file, cb) => {
-    const uploadPath =
-      file.fieldname === 'avatar'
-        ? path.join(config.upload.path, 'avatars')
-        : path.join(config.upload.path, 'resumes');
+    let uploadPath;
+    if (file.fieldname === 'avatar') {
+      uploadPath = path.join(config.upload.path, 'avatars');
+    } else if (file.fieldname === 'marksheet') {
+      uploadPath = path.join(config.upload.path, 'marksheets');
+    } else {
+      uploadPath = path.join(config.upload.path, 'resumes');
+    }
+    
+    // Create directory if it doesn't exist
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    
     cb(null, uploadPath);
   },
   filename: (_req, file, cb) => {
@@ -39,6 +50,14 @@ const fileFilter = (
     } else {
       cb(new ApiError('Only image files are allowed for avatars', 400));
     }
+  }
+  // For marksheets, allow PDF and images
+  else if (file.fieldname === 'marksheet') {
+    if (file.mimetype === 'application/pdf' || file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new ApiError('Only PDF and image files are allowed for marksheets', 400));
+    }
   } else {
     cb(null, true);
   }
@@ -48,7 +67,7 @@ const fileFilter = (
 export const upload = multer({
   storage,
   limits: {
-    fileSize: config.upload.maxSize, // 5MB
+    fileSize: 10 * 1024 * 1024, // 10MB for marksheets
   },
   fileFilter,
 });

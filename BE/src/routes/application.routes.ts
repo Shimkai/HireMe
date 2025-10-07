@@ -15,6 +15,8 @@ router.delete('/:applicationId', authenticate, authorizeRoles('Student'), applic
 
 // Recruiter/TnP routes
 router.get('/job/:jobId', authenticate, applicationController.getJobApplications);
+router.get('/recruiter', authenticate, authorizeRoles('Recruiter'), applicationController.getRecruiterApplications);
+router.get('/all', authenticate, authorizeRoles('TnP'), applicationController.getAllApplications);
 router.put('/:applicationId/status', authenticate, authorizeRoles('Recruiter'), validate(updateApplicationStatusSchema), applicationController.updateApplicationStatus);
 
 export default router;

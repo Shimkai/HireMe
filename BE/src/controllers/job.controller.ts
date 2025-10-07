@@ -1,3 +1,4 @@
+/// <reference path="../types/express.d.ts" />
 import { Request, Response } from 'express';
 import { asyncHandler } from '../utils/asyncHandler';
 import { ApiSuccess } from '../utils/apiResponse';
@@ -50,8 +51,10 @@ export const getAllJobs = asyncHandler(async (req: Request, res: Response) => {
   } else if (req.user.role === 'Recruiter') {
     // Recruiters see only their own jobs
     filter.postedBy = req.user.id;
+  } else if (req.user.role === 'TnP') {
+    // TnP sees all jobs (no additional filters)
+    // They can see pending, approved, and rejected jobs
   }
-  // TnP sees all jobs
 
   // Additional filters
   if (req.query.status) {

@@ -1,3 +1,4 @@
+/// <reference path="../types/express.d.ts" />
 import { Request, Response } from 'express';
 import { asyncHandler } from '../utils/asyncHandler';
 import { ApiSuccess } from '../utils/apiResponse';
@@ -175,7 +176,7 @@ export const updateApplicationStatus = asyncHandler(async (req: Request, res: Re
     throw ApiError.forbidden('You can only update applications for your own jobs');
   }
 
-  const { status, recruiterNotes, rejectionReason, interviewDetails } = req.body;
+  const { status, recruiterNotes, rejectionReason, interviewDetails, shortlistedAt, offeredAt } = req.body;
 
   application.status = status;
   application.reviewedAt = new Date();
@@ -191,6 +192,13 @@ export const updateApplicationStatus = asyncHandler(async (req: Request, res: Re
 
   if (interviewDetails) {
     application.interviewDetails = interviewDetails;
+  }
+
+  // Set specific timestamps based on status
+  if (status === 'Shortlisted' && shortlistedAt) {
+    application.shortlistedAt = new Date(shortlistedAt);
+  } else if (status === 'Offered' && offeredAt) {
+    application.offeredAt = new Date(offeredAt);
   }
 
   if (!application.viewedByRecruiter) {
@@ -258,5 +266,93 @@ export const withdrawApplication = asyncHandler(async (req: Request, res: Respon
   });
 
   ApiSuccess.send(res, null, 'Application withdrawn successfully');
+});
+
+export const getRecruiterApplications = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user || req.user.role !== 'Recruiter') {
+    throw ApiError.forbidden('Only recruiters can view their applications');
+  }
+
+  const { page, limit, status } = req.query;
+  const { skip, limit: pageLimit } = getPaginationParams(
+    typeof page === 'string' ? page : undefined,
+    typeof limit === 'string' ? limit : undefined
+  );
+
+  // Build query
+  const query: any = {};
+  
+  // Get jobs posted by this recruiter
+  const recruiterJobs = await Job.find({ postedBy: req.user.id }).select('_id');
+  const jobIds = recruiterJobs.map(job => job._id);
+  
+  if (jobIds.length === 0) {
+    return ApiSuccess.sendWithPagination(res, [], calculatePagination(0, pageLimit, 0), 'No applications found');
+  }
+
+  query.jobId = { $in: jobIds };
+
+  if (status && status !== 'All' && typeof status === 'string') {
+    query.status = status;
+  }
+
+  // Get applications with populated student and job data
+  const applications = await Application.find(query)
+    .populate({
+      path: 'studentId',
+      select: 'fullName email mobileNumber profileAvatar studentDetails',
+      populate: {
+        path: 'studentDetails.college',
+        select: 'name'
+      }
+    })
+    .populate({
+      path: 'jobId',
+      select: 'title companyName'
+    })
+    .sort({ appliedAt: -1 })
+    .skip(skip)
+    .limit(pageLimit);
+
+  const total = await Application.countDocuments(query);
+
+  return ApiSuccess.sendWithPagination(res, applications, calculatePagination(skip, pageLimit, total), 'Applications retrieved successfully');
+});
+
+export const getAllApplications = asyncHandler(async (req: Request, res: Response) => {
+  const { page, limit, status } = req.query;
+  const { skip, limit: pageLimit } = getPaginationParams(
+    typeof page === 'string' ? page : undefined,
+    typeof limit === 'string' ? limit : undefined
+  );
+
+  // Build query
+  const query: any = {};
+
+  if (status && status !== 'All' && typeof status === 'string') {
+    query.status = status;
+  }
+
+  // Get all applications with populated student and job data
+  const applications = await Application.find(query)
+    .populate({
+      path: 'studentId',
+      select: 'fullName email mobileNumber profileAvatar studentDetails',
+      populate: {
+        path: 'studentDetails.college',
+        select: 'name'
+      }
+    })
+    .populate({
+      path: 'jobId',
+      select: 'title companyName'
+    })
+    .sort({ appliedAt: -1 })
+    .skip(skip)
+    .limit(pageLimit);
+
+  const total = await Application.countDocuments(query);
+
+  return ApiSuccess.sendWithPagination(res, applications, calculatePagination(skip, pageLimit, total), 'All applications retrieved successfully');
 });
 

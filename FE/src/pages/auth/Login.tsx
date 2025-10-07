@@ -1,7 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import { Container, Paper, TextField, Button, Typography, Box, Alert, Link } from '@mui/material';
+import {
+  Container,
+  Paper,
+  TextField,
+  Button,
+  Typography,
+  Box,
+  Alert,
+  Link,
+} from '@mui/material';
 import { authService } from '../../services/authService';
 import { setCredentials } from '../../features/auth/authSlice';
 
@@ -21,7 +30,20 @@ const Login = () => {
     try {
       const data = await authService.login(email, password);
       dispatch(setCredentials(data));
-      navigate('/dashboard');
+      // Redirect based on user role
+      switch (data.user.role) {
+        case 'Student':
+          navigate('/student/dashboard');
+          break;
+        case 'Recruiter':
+          navigate('/recruiter/dashboard');
+          break;
+        case 'TnP':
+          navigate('/tnp/dashboard');
+          break;
+        default:
+          navigate('/dashboard');
+      }
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'Login failed');
     } finally {
@@ -100,3 +122,4 @@ const Login = () => {
 };
 
 export default Login;
+

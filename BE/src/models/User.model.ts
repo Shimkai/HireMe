@@ -10,6 +10,23 @@ interface IStudentDetails {
   cgpa?: number;
   yearOfCompletion?: number;
   registrationNumber?: string;
+  address?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+    country?: string;
+  };
+  tenthMarks?: {
+    percentage?: number;
+    marksheet?: string;
+  };
+  twelfthMarks?: {
+    percentage?: number;
+    marksheet?: string;
+  };
+  lastSemesterMarksheet?: string;
+  areaOfInterest?: string[];
 }
 
 // Recruiter Details Interface
@@ -128,6 +145,54 @@ const userSchema = new Schema<IUser>(
         unique: true,
         sparse: true,
       },
+      address: {
+        street: { type: String },
+        city: { type: String },
+        state: { type: String },
+        pincode: { type: String },
+        country: { type: String, default: 'India' },
+      },
+      tenthMarks: {
+        percentage: { type: Number, min: 0, max: 100 },
+        marksheet: { type: String }, // File path
+      },
+      twelfthMarks: {
+        percentage: { type: Number, min: 0, max: 100 },
+        marksheet: { type: String }, // File path
+      },
+      lastSemesterMarksheet: {
+        type: String, // File path
+      },
+      areaOfInterest: [{
+        type: String,
+        enum: [
+          'Backend Development',
+          'Frontend Development', 
+          'Full-Stack Development',
+          'Mobile Development',
+          'Data Science',
+          'Machine Learning',
+          'Artificial Intelligence',
+          'DevOps',
+          'Cloud Computing',
+          'Cybersecurity',
+          'Testing/QA',
+          'UI/UX Design',
+          'Database Administration',
+          'System Administration',
+          'Network Engineering',
+          'Software Architecture',
+          'Product Management',
+          'Business Analysis',
+          'Digital Marketing',
+          'Content Writing',
+          'Graphic Design',
+          'Video Editing',
+          'Photography',
+          'Other'
+        ],
+        trim: true,
+      }],
     },
 
     // Recruiter Details
@@ -160,7 +225,7 @@ const userSchema = new Schema<IUser>(
       verificationStatus: {
         type: String,
         enum: ['Pending', 'Verified', 'Rejected'],
-        default: 'Pending',
+        default: 'Verified', // Recruiters are automatically verified
       },
     },
 

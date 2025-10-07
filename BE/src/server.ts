@@ -1,3 +1,4 @@
+/// <reference path="./types/express.d.ts" />
 import express, { Application } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -8,13 +9,16 @@ import { config } from './config/env';
 import { logger } from './utils/logger';
 import { requestLogger } from './middleware/logger.middleware';
 import { errorHandler } from './middleware/errorHandler.middleware';
-import { apiLimiter } from './middleware/rateLimiter.middleware';
+import { apiLimiter, devApiLimiter } from './middleware/rateLimiter.middleware';
 import routes from './routes';
 
 const app: Application = express();
 
 // Security middleware
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginEmbedderPolicy: false
+}));
 
 // CORS configuration
 app.use(
@@ -32,11 +36,21 @@ app.use(cookieParser());
 // Request logging
 app.use(requestLogger);
 
-// Rate limiting
-app.use('/api', apiLimiter);
+// Rate limiting - use development-friendly limiter
+if (process.env.NODE_ENV === 'development') {
+  app.use('/api', devApiLimiter);
+} else {
+  app.use('/api', apiLimiter);
+}
 
-// Serve static files (uploads)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Serve static files (uploads) with CORS headers
+app.use('/uploads', (_req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  res.header('Cache-Control', 'public, max-age=31536000');
+  next();
+}, express.static(path.join(__dirname, '..', 'src', 'uploads')));
 
 // Health check route
 app.get('/health', (_req, res) => {

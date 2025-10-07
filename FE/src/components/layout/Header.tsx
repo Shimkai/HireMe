@@ -57,7 +57,11 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
         <Chip label={user?.role} color="secondary" size="small" sx={{ mr: 2 }} />
 
         <IconButton onClick={handleMenu} sx={{ p: 0 }}>
-          <Avatar alt={user?.fullName} sx={{ bgcolor: 'secondary.main' }}>
+          <Avatar 
+            alt={user?.fullName} 
+            src={user?.profileAvatar ? `http://localhost:5000${user.profileAvatar}` : undefined}
+            sx={{ bgcolor: 'secondary.main' }}
+          >
             {user?.fullName?.charAt(0)}
           </Avatar>
         </IconButton>

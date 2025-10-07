@@ -1,3 +1,4 @@
+/// <reference path="../types/express.d.ts" />
 import { Request, Response } from 'express';
 import { asyncHandler } from '../utils/asyncHandler';
 import { ApiSuccess } from '../utils/apiResponse';
@@ -28,6 +29,8 @@ export const updateProfile = asyncHandler(async (req: Request, res: Response) =>
     throw ApiError.unauthorized('Not authenticated');
   }
 
+  console.log('Update profile request body:', JSON.stringify(req.body, null, 2));
+
   const user = await User.findById(req.user.id);
   if (!user) {
     throw ApiError.notFound('User not found');
@@ -43,7 +46,23 @@ export const updateProfile = asyncHandler(async (req: Request, res: Response) =>
 
   // Update role-specific details
   if (req.body.studentDetails && user.role === 'Student') {
+    console.log('Before update - user.studentDetails:', user.studentDetails);
+    // Initialize studentDetails if it doesn't exist
+    if (!user.studentDetails) {
+      user.studentDetails = {
+        isVerified: false,
+        placementStatus: 'Not Placed'
+      };
+    }
     user.studentDetails = { ...user.studentDetails, ...req.body.studentDetails };
+    
+    // Automatically set student as unverified when profile is updated
+    // This requires TnP verification again
+    if (user.studentDetails) {
+      user.studentDetails.isVerified = false;
+    }
+    
+    console.log('After update - user.studentDetails:', user.studentDetails);
   }
   if (req.body.recruiterDetails && user.role === 'Recruiter') {
     user.recruiterDetails = { ...user.recruiterDetails, ...req.body.recruiterDetails };
@@ -64,7 +83,195 @@ export const updateProfile = asyncHandler(async (req: Request, res: Response) =>
     userAgent: req.get('user-agent'),
   });
 
-  ApiSuccess.send(res, sanitizeUser(user), 'Profile updated successfully');
+  // Fetch updated user with populated references
+  const updatedUser = await User.findById(req.user.id)
+    .populate('studentDetails.college')
+    .populate('tnpDetails.college');
+
+  console.log('Updated user from database:', JSON.stringify(updatedUser?.studentDetails, null, 2));
+
+  ApiSuccess.send(res, sanitizeUser(updatedUser), 'Profile updated successfully');
+});
+
+export const uploadAvatar = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw ApiError.unauthorized('Not authenticated');
+  }
+
+  if (!req.file) {
+    throw ApiError.badRequest('No file uploaded');
+  }
+
+  console.log('Upload details:', {
+    filename: req.file.filename,
+    originalname: req.file.originalname,
+    mimetype: req.file.mimetype,
+    size: req.file.size,
+    fieldname: req.file.fieldname
+  });
+
+  const user = await User.findById(req.user.id);
+  if (!user) {
+    throw ApiError.notFound('User not found');
+  }
+
+  // Update profile avatar
+  user.profileAvatar = `/uploads/avatars/${req.file.filename}`;
+  
+  // If user is a student, set as unverified when avatar is changed
+  if (user.role === 'Student' && user.studentDetails) {
+    user.studentDetails.isVerified = false;
+  }
+  
+  await user.save();
+
+  // Log activity
+  await ActivityLog.create({
+    userId: req.user.id,
+    action: 'PROFILE_UPDATE',
+    entityType: 'User',
+    entityId: user._id,
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  });
+
+  // Fetch updated user with populated references
+  const updatedUser = await User.findById(req.user.id)
+    .populate('studentDetails.college')
+    .populate('tnpDetails.college');
+
+  ApiSuccess.send(res, { profileAvatar: updatedUser?.profileAvatar }, 'Avatar uploaded successfully');
+});
+
+export const uploadTenthMarksheet = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw ApiError.unauthorized('Not authenticated');
+  }
+
+  if (!req.file) {
+    throw ApiError.badRequest('No file uploaded');
+  }
+
+  const user = await User.findById(req.user.id);
+  if (!user) {
+    throw ApiError.notFound('User not found');
+  }
+
+  // Update tenth marksheet
+  if (!user.studentDetails) {
+    user.studentDetails = {
+      isVerified: false,
+      placementStatus: 'Not Placed',
+      tenthMarks: {}
+    };
+  }
+  user.studentDetails.tenthMarks = {
+    ...user.studentDetails.tenthMarks,
+    marksheet: `/uploads/marksheets/${req.file.filename}`,
+  };
+  
+  // Set student as unverified when marksheet is uploaded
+  user.studentDetails.isVerified = false;
+  
+  await user.save();
+
+  // Log activity
+  await ActivityLog.create({
+    userId: req.user.id,
+    action: 'PROFILE_UPDATE',
+    entityType: 'User',
+    entityId: user._id,
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  });
+
+  ApiSuccess.send(res, { tenthMarks: user.studentDetails.tenthMarks }, 'Tenth marksheet uploaded successfully');
+});
+
+export const uploadTwelfthMarksheet = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw ApiError.unauthorized('Not authenticated');
+  }
+
+  if (!req.file) {
+    throw ApiError.badRequest('No file uploaded');
+  }
+
+  const user = await User.findById(req.user.id);
+  if (!user) {
+    throw ApiError.notFound('User not found');
+  }
+
+  // Update twelfth marksheet
+  if (!user.studentDetails) {
+    user.studentDetails = {
+      isVerified: false,
+      placementStatus: 'Not Placed',
+      twelfthMarks: {}
+    };
+  }
+  user.studentDetails.twelfthMarks = {
+    ...user.studentDetails.twelfthMarks,
+    marksheet: `/uploads/marksheets/${req.file.filename}`,
+  };
+  
+  // Set student as unverified when marksheet is uploaded
+  user.studentDetails.isVerified = false;
+  
+  await user.save();
+
+  // Log activity
+  await ActivityLog.create({
+    userId: req.user.id,
+    action: 'PROFILE_UPDATE',
+    entityType: 'User',
+    entityId: user._id,
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  });
+
+  ApiSuccess.send(res, { twelfthMarks: user.studentDetails.twelfthMarks }, 'Twelfth marksheet uploaded successfully');
+});
+
+export const uploadLastSemesterMarksheet = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw ApiError.unauthorized('Not authenticated');
+  }
+
+  if (!req.file) {
+    throw ApiError.badRequest('No file uploaded');
+  }
+
+  const user = await User.findById(req.user.id);
+  if (!user) {
+    throw ApiError.notFound('User not found');
+  }
+
+  // Update last semester marksheet
+  if (!user.studentDetails) {
+    user.studentDetails = {
+      isVerified: false,
+      placementStatus: 'Not Placed'
+    };
+  }
+  user.studentDetails.lastSemesterMarksheet = `/uploads/marksheets/${req.file.filename}`;
+  
+  // Set student as unverified when marksheet is uploaded
+  user.studentDetails.isVerified = false;
+  
+  await user.save();
+
+  // Log activity
+  await ActivityLog.create({
+    userId: req.user.id,
+    action: 'PROFILE_UPDATE',
+    entityType: 'User',
+    entityId: user._id,
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  });
+
+  ApiSuccess.send(res, { lastSemesterMarksheet: user.studentDetails.lastSemesterMarksheet }, 'Last semester marksheet uploaded successfully');
 });
 
 export const getStudents = asyncHandler(async (req: Request, res: Response) => {

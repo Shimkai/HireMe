@@ -2,10 +2,12 @@ import Joi from 'joi';
 
 export const updateApplicationStatusSchema = Joi.object({
   status: Joi.string()
-    .valid('Applied', 'Under Review', 'Shortlisted', 'Interview Scheduled', 'Accepted', 'Rejected')
+    .valid('Applied', 'Under Review', 'Shortlisted', 'Interview Scheduled', 'Offered', 'Accepted', 'Rejected', 'Withdrawn')
     .required(),
   recruiterNotes: Joi.string().max(1000),
   rejectionReason: Joi.string().max(500),
+  shortlistedAt: Joi.date(),
+  offeredAt: Joi.date(),
   interviewDetails: Joi.object({
     scheduledDate: Joi.date(),
     scheduledTime: Joi.string(),
