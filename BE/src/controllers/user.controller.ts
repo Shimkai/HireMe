@@ -7,6 +7,7 @@ import User from '../models/User.model';
 import { sanitizeUser, getPaginationParams, calculatePagination } from '../utils/helpers';
 import ActivityLog from '../models/ActivityLog.model';
 import { notifyStudentVerified } from '../services/notification.service';
+import { config } from '../config/env';
 
 export const getProfile = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
@@ -272,6 +273,38 @@ export const uploadLastSemesterMarksheet = asyncHandler(async (req: Request, res
   });
 
   ApiSuccess.send(res, { lastSemesterMarksheet: user.studentDetails.lastSemesterMarksheet }, 'Last semester marksheet uploaded successfully');
+});
+
+export const updateAvatar = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw ApiError.unauthorized('Not authenticated');
+  }
+
+  if (!req.file) {
+    throw ApiError.badRequest('No avatar file provided');
+  }
+
+  const user = await User.findById(req.user.id);
+  if (!user) {
+    throw ApiError.notFound('User not found');
+  }
+
+  // Update profile avatar with the uploaded file path
+  const avatarUrl = `${config.client.url.replace(':5173', `:${config.port}`)}/uploads/avatars/${req.file.filename}`;
+  user.profileAvatar = avatarUrl;
+  await user.save();
+
+  // Log activity
+  await ActivityLog.create({
+    userId: req.user.id,
+    action: 'AVATAR_UPDATE',
+    entityType: 'User',
+    entityId: user._id,
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  });
+
+  ApiSuccess.send(res, sanitizeUser(user), 'Avatar updated successfully');
 });
 
 export const getStudents = asyncHandler(async (req: Request, res: Response) => {

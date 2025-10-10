@@ -29,10 +29,14 @@ export const registerSchema = Joi.object({
     is: 'Student',
     then: Joi.object({
       courseName: Joi.string().required(),
-      college: Joi.string().required(),
+      college: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required().messages({
+        'string.pattern.base': 'Invalid college ID',
+        'string.empty': 'College is required',
+      }),
       cgpa: Joi.number().min(0).max(10),
       yearOfCompletion: Joi.number().min(2020).max(2030),
       registrationNumber: Joi.string(),
+      skills: Joi.array().items(Joi.string()).default([]),
     }).required(),
     otherwise: Joi.forbidden(),
   }),
@@ -52,7 +56,10 @@ export const registerSchema = Joi.object({
   tnpDetails: Joi.when('role', {
     is: 'TnP',
     then: Joi.object({
-      college: Joi.string().required(),
+      college: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required().messages({
+        'string.pattern.base': 'Invalid college ID',
+        'string.empty': 'College is required',
+      }),
       designation: Joi.string().required(),
       employeeId: Joi.string(),
     }).required(),

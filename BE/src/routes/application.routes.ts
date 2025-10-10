@@ -14,6 +14,7 @@ router.get('/my-applications', authenticate, authorizeRoles('Student'), applicat
 router.delete('/:applicationId', authenticate, authorizeRoles('Student'), applicationController.withdrawApplication);
 
 // Recruiter/TnP routes
+router.get('/my-job-applications', authenticate, authorizeRoles('Recruiter'), applicationController.getMyJobApplications);
 router.get('/job/:jobId', authenticate, applicationController.getJobApplications);
 router.get('/recruiter', authenticate, authorizeRoles('Recruiter'), applicationController.getRecruiterApplications);
 router.get('/all', authenticate, authorizeRoles('TnP'), applicationController.getAllApplications);

@@ -35,12 +35,17 @@ const fileFilter = (
   file: Express.Multer.File,
   cb: multer.FileFilterCallback
 ) => {
-  // For resumes, only allow PDF
+  // For resumes, allow PDF, DOC, DOCX
   if (file.fieldname === 'resume') {
-    if (file.mimetype === 'application/pdf') {
+    const allowedMimeTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
+    if (allowedMimeTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new ApiError('Only PDF files are allowed for resumes', 400));
+      cb(new ApiError('Only PDF, DOC, and DOCX files are allowed for resumes', 400));
     }
   }
   // For avatars, allow images

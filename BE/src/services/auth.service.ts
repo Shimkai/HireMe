@@ -32,7 +32,7 @@ export const loginUser = async (
   password: string
 ): Promise<{ user: any; token: string }> => {
   // Find user with password field
-  const user = await User.findOne({ email }).select('+password').populate('studentDetails.college tnpDetails.college');
+  const user = await User.findOne({ email }).select('+password');
 
   if (!user) {
     throw ApiError.unauthorized('Invalid credentials');
@@ -47,6 +47,19 @@ export const loginUser = async (
   const isPasswordValid = await user.comparePassword(password);
   if (!isPasswordValid) {
     throw ApiError.unauthorized('Invalid credentials');
+  }
+
+  // Populate college references if they exist
+  try {
+    if (user.role === 'Student' && user.studentDetails?.college) {
+      await user.populate('studentDetails.college');
+    }
+    if (user.role === 'TnP' && user.tnpDetails?.college) {
+      await user.populate('tnpDetails.college');
+    }
+  } catch (populateError) {
+    console.warn('College population failed:', populateError);
+    // Continue without population - this is not critical for login
   }
 
   // Update last login

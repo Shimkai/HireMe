@@ -10,7 +10,7 @@ const router = Router();
 
 router.get('/me', authenticate, userController.getProfile);
 router.put('/me', authenticate, validate(updateProfileSchema), userController.updateProfile);
-router.post('/upload-avatar', authenticate, upload.single('avatar'), userController.uploadAvatar);
+router.put('/me/avatar', authenticate, upload.single('avatar'), userController.updateAvatar);
 router.post('/upload-tenth-marksheet', authenticate, upload.single('marksheet'), userController.uploadTenthMarksheet);
 router.post('/upload-twelfth-marksheet', authenticate, upload.single('marksheet'), userController.uploadTwelfthMarksheet);
 router.post('/upload-last-semester-marksheet', authenticate, upload.single('marksheet'), userController.uploadLastSemesterMarksheet);

@@ -6,6 +6,8 @@ import {
   People,
   CheckCircle,
   Analytics,
+  Assessment,
+  Person,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
@@ -22,6 +24,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open }) => {
   const { user } = useAuth();
 
   const studentMenuItems = [
+<<<<<<< HEAD
     { text: 'Dashboard', icon: <Dashboard />, path: '/student/dashboard' },
     { text: 'Browse Jobs', icon: <Work />, path: '/student/jobs' },
     { text: 'My Applications', icon: <Assignment />, path: '/student/applications' },
@@ -43,6 +46,30 @@ const Sidebar: React.FC<SidebarProps> = ({ open }) => {
     { text: 'View Applicants', icon: <Assignment />, path: '/tnp/applicants' },
     { text: 'Reports', icon: <Analytics />, path: '/tnp/reports' },
     { text: 'Profile', icon: <People />, path: '/tnp/profile' },
+=======
+    { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
+    { text: 'My Profile', icon: <Person />, path: '/profile' },
+    { text: 'Browse Jobs', icon: <Work />, path: '/jobs' },
+    { text: 'My Applications', icon: <Assignment />, path: '/applications' },
+    { text: 'Resume', icon: <Description />, path: '/resume' },
+  ];
+
+  const recruiterMenuItems = [
+    { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
+    { text: 'My Profile', icon: <Person />, path: '/profile' },
+    { text: 'Post Job', icon: <Work />, path: '/jobs/new' },
+    { text: 'My Jobs', icon: <Work />, path: '/jobs' },
+    { text: 'Applicants', icon: <People />, path: '/applicants' },
+  ];
+
+  const tnpMenuItems = [
+    { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
+    { text: 'My Profile', icon: <Person />, path: '/profile' },
+    { text: 'Manage Students', icon: <People />, path: '/students' },
+    { text: 'Approve Jobs', icon: <CheckCircle />, path: '/jobs/pending' },
+    { text: 'Analytics', icon: <Analytics />, path: '/analytics' },
+    { text: 'Report', icon: <Assessment />, path: '/report' },
+>>>>>>> 9b124f5 (report and student recommendation)
   ];
 
   const getMenuItems = () => {

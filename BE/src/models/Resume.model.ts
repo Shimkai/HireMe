@@ -306,8 +306,7 @@ const resumeSchema = new Schema<IResume>(
   }
 );
 
-// Index
-resumeSchema.index({ studentId: 1 });
+// Index - studentId index is already created by unique: true
 
 const Resume = mongoose.model<IResume>('Resume', resumeSchema);
 

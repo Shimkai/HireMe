@@ -9,9 +9,23 @@ interface AuthState {
 }
 
 const initialState: AuthState = {
-  user: JSON.parse(localStorage.getItem('user') || 'null'),
+  user: (() => {
+    try {
+      const userData = localStorage.getItem('user');
+      return userData ? JSON.parse(userData) : null;
+    } catch (error) {
+      console.error('Error parsing user data from localStorage:', error);
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      return null;
+    }
+  })(),
   token: localStorage.getItem('token'),
-  isAuthenticated: !!localStorage.getItem('token'),
+  isAuthenticated: (() => {
+    const token = localStorage.getItem('token');
+    const user = localStorage.getItem('user');
+    return !!(token && user);
+  })(),
   loading: false,
 };
 
@@ -37,9 +51,33 @@ const authSlice = createSlice({
       state.user = action.payload;
       localStorage.setItem('user', JSON.stringify(action.payload));
     },
+    initializeAuth: (state) => {
+      // Re-check localStorage on initialization
+      try {
+        const userData = localStorage.getItem('user');
+        const token = localStorage.getItem('token');
+        
+        if (userData && token) {
+          state.user = JSON.parse(userData);
+          state.token = token;
+          state.isAuthenticated = true;
+        } else {
+          state.user = null;
+          state.token = null;
+          state.isAuthenticated = false;
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        state.user = null;
+        state.token = null;
+        state.isAuthenticated = false;
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+      }
+    },
   },
 });
 
-export const { setCredentials, logout, updateUser } = authSlice.actions;
+export const { setCredentials, logout, updateUser, initializeAuth } = authSlice.actions;
 export default authSlice.reducer;
 

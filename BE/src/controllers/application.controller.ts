@@ -231,6 +231,42 @@ export const updateApplicationStatus = asyncHandler(async (req: Request, res: Re
   ApiSuccess.send(res, application, 'Application status updated successfully');
 });
 
+export const getMyJobApplications = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  if (!req.user || req.user.role !== 'Recruiter') {
+    throw ApiError.forbidden('Only recruiters can view their job applications');
+  }
+
+  const { page, limit, skip } = getPaginationParams(req.query.page as string, req.query.limit as string);
+
+  // Get all jobs posted by this recruiter
+  const jobs = await Job.find({ postedBy: req.user.id });
+  const jobIds = jobs.map(job => job._id);
+
+  if (jobIds.length === 0) {
+    const pagination = calculatePagination(0, page, limit);
+    ApiSuccess.sendWithPagination(res, [], pagination, 'No applications found');
+    return;
+  }
+
+  const filter: any = { jobId: { $in: jobIds } };
+
+  if (req.query.status) {
+    filter.status = req.query.status;
+  }
+
+  const total = await Application.countDocuments(filter);
+  const applications = await Application.find(filter)
+    .populate('jobId')
+    .populate('studentId')
+    .skip(skip)
+    .limit(limit)
+    .sort({ appliedAt: -1 });
+
+  const pagination = calculatePagination(total, page, limit);
+
+  ApiSuccess.sendWithPagination(res, applications, pagination, 'Applications fetched successfully');
+});
+
 export const withdrawApplication = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user || req.user.role !== 'Student') {
     throw ApiError.forbidden('Only students can withdraw their applications');

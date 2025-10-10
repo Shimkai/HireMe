@@ -1,4 +1,5 @@
 import api from '../utils/api';
+<<<<<<< HEAD
 
 export interface User {
   _id: string;
@@ -49,11 +50,21 @@ export interface User {
     designation: string;
     employeeId?: string;
   };
+=======
+import { User } from '../types';
+
+export interface UsersResponse {
+  success: boolean;
+  data: User[];
+  pagination: any;
+  message: string;
+>>>>>>> 9b124f5 (report and student recommendation)
 }
 
 export interface UserResponse {
   success: boolean;
   data: User;
+<<<<<<< HEAD
   message?: string;
 }
 
@@ -155,3 +166,39 @@ class UserService {
 }
 
 export const userService = new UserService();
+=======
+  message: string;
+}
+
+export const userService = {
+  getStudents: async (params?: any): Promise<{ data: User[]; pagination: any }> => {
+    const response = await api.get<UsersResponse>('/users/students', { params });
+    return {
+      data: response.data.data,
+      pagination: response.data.pagination,
+    };
+  },
+
+  verifyStudent: async (studentId: string, isVerified: boolean, reason?: string): Promise<User> => {
+    const response = await api.put<UserResponse>(`/users/students/${studentId}/verify`, {
+      isVerified,
+      reason,
+    });
+    return response.data.data;
+  },
+
+  deleteStudent: async (studentId: string): Promise<void> => {
+    await api.delete(`/users/students/${studentId}`);
+  },
+
+  getProfile: async (): Promise<User> => {
+    const response = await api.get<UserResponse>('/users/me');
+    return response.data.data;
+  },
+
+  updateProfile: async (data: any): Promise<User> => {
+    const response = await api.put<UserResponse>('/users/me', data);
+    return response.data.data;
+  },
+};
+>>>>>>> 9b124f5 (report and student recommendation)

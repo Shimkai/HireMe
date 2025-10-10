@@ -15,12 +15,42 @@ export interface User {
 
 export interface StudentDetails {
   courseName: string;
-  college: string | College;
+  college: string; // ObjectId as string from backend
   isVerified: boolean;
   placementStatus: 'Placed' | 'Not Placed';
   cgpa?: number;
   yearOfCompletion?: number;
   registrationNumber?: string;
+  // Additional fields
+  skills?: string[];
+  tenthPercentage?: number;
+  twelfthPercentage?: number;
+  tenthMarksheet?: {
+    filename: string;
+    originalName: string;
+    path: string;
+    uploadedAt: string;
+  };
+  twelfthMarksheet?: {
+    filename: string;
+    originalName: string;
+    path: string;
+    uploadedAt: string;
+  };
+  lastSemMarksheet?: {
+    filename: string;
+    originalName: string;
+    path: string;
+    uploadedAt: string;
+  };
+  projects?: Array<{
+    title: string;
+    description: string;
+    technologies: string[];
+    githubUrl?: string;
+    liveUrl?: string;
+    duration?: string;
+  }>;
 }
 
 export interface RecruiterDetails {
@@ -33,7 +63,7 @@ export interface RecruiterDetails {
 }
 
 export interface TnPDetails {
-  college: string | College;
+  college: string; // ObjectId as string from backend
   designation: string;
   employeeId?: string;
 }

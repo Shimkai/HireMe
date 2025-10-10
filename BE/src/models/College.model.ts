@@ -21,8 +21,7 @@ const collegeSchema = new Schema<ICollege>(
   }
 );
 
-// Indexes
-collegeSchema.index({ name: 1 });
+// Indexes - name index is already created by unique: true
 
 const College = mongoose.model<ICollege>('College', collegeSchema);
 

@@ -3,6 +3,11 @@ import Joi from 'joi';
 
 dotenv.config();
 
+console.log("Loaded ENV:", process.env.MONGODB_URI);
+
+
+
+
 const envSchema = Joi.object({
   NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
   PORT: Joi.number().default(5000),

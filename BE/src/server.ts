@@ -21,9 +21,24 @@ app.use(helmet({
 }));
 
 // CORS configuration
+const allowedOrigins = [
+  config.client.url,
+  'http://localhost:3000',
+  'http://localhost:5173'
+];
+
 app.use(
   cors({
-    origin: config.client.url,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        return callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   })
 );
@@ -44,13 +59,17 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // Serve static files (uploads) with CORS headers
+const uploadsPath = config.env === 'development' 
+  ? path.join(process.cwd(), 'src', 'uploads')
+  : path.join(__dirname, 'uploads');
+
 app.use('/uploads', (_req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
   res.header('Cache-Control', 'public, max-age=31536000');
   next();
-}, express.static(path.join(__dirname, '..', 'src', 'uploads')));
+}, express.static(uploadsPath));
 
 // Health check route
 app.get('/health', (_req, res) => {
@@ -78,17 +97,66 @@ app.use(errorHandler);
 // Database connection
 connectDatabase();
 
-// Start server
+// Start server with port conflict handling
 const PORT = config.port;
-const server = app.listen(PORT, () => {
-  logger.info(`🚀 Server running on port ${PORT} in ${config.env} mode`);
-});
+
+const startServer = async () => {
+  try {
+    const server = app.listen(PORT, () => {
+      logger.info(`🚀 Server running on port ${PORT} in ${config.env} mode`);
+      logger.info(`📡 Health check: http://localhost:${PORT}/health`);
+      logger.info(`🔗 API base URL: http://localhost:${PORT}/api`);
+    });
+
+    // Handle server errors
+    server.on('error', (error: any) => {
+      if (error.code === 'EADDRINUSE') {
+        logger.error(`❌ Port ${PORT} is already in use!`);
+        logger.error('💡 Solutions:');
+        logger.error('   1. Kill the process using this port:');
+        logger.error(`      netstat -ano | findstr :${PORT}`);
+        logger.error(`      taskkill /PID <PID> /F`);
+        logger.error('   2. Or change the PORT in your .env file');
+        logger.error('   3. Or wait a few seconds and try again');
+        process.exit(1);
+      } else {
+        logger.error('❌ Server error:', error);
+        process.exit(1);
+      }
+    });
+
+    // Handle graceful shutdown
+    process.on('SIGTERM', () => {
+      logger.info('🛑 SIGTERM received, shutting down gracefully');
+      server.close(() => {
+        logger.info('✅ Server closed');
+        process.exit(0);
+      });
+    });
+
+    process.on('SIGINT', () => {
+      logger.info('🛑 SIGINT received, shutting down gracefully');
+      server.close(() => {
+        logger.info('✅ Server closed');
+        process.exit(0);
+      });
+    });
+
+    return server;
+  } catch (error) {
+    logger.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+};
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err: Error) => {
   logger.error('Unhandled Promise Rejection:', err);
-  server.close(() => process.exit(1));
+  process.exit(1);
 });
+
+// Start the server
+startServer();
 
 export default app;
 

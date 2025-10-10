@@ -27,6 +27,7 @@ interface IStudentDetails {
   };
   lastSemesterMarksheet?: string;
   areaOfInterest?: string[];
+  skills?: string[];
 }
 
 // Recruiter Details Interface
@@ -193,6 +194,10 @@ const userSchema = new Schema<IUser>(
         ],
         trim: true,
       }],
+      skills: {
+        type: [String],
+        default: [],
+      },
     },
 
     // Recruiter Details
@@ -263,7 +268,6 @@ const userSchema = new Schema<IUser>(
 );
 
 // Indexes
-userSchema.index({ email: 1 });
 userSchema.index({ role: 1 });
 userSchema.index({ 'studentDetails.college': 1 });
 userSchema.index({ 'tnpDetails.college': 1 });

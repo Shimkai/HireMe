@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React, { useState, useEffect } from 'react';
 import { 
   Box, 
@@ -26,6 +27,13 @@ import {
   CheckCircleOutline,
 } from '@mui/icons-material';
 import { applicationService, Application } from '../../services/applicationService';
+=======
+import { Container, Grid, Card, CardContent, Typography, Button, Box } from '@mui/material';
+import { Work, Assignment, Event, CheckCircle } from '@mui/icons-material';
+import MainLayout from '../../components/layout/MainLayout';
+import RecommendedJobs from '../../components/RecommendedJobs';
+import { useNavigate } from 'react-router-dom';
+>>>>>>> 9b124f5 (report and student recommendation)
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
@@ -283,6 +291,7 @@ const Dashboard: React.FC = () => {
         </Grid>
       </Grid>
 
+<<<<<<< HEAD
       {/* Welcome Popup for First-Time Students */}
       <Dialog
         open={showWelcomePopup}
@@ -308,6 +317,15 @@ const Dashboard: React.FC = () => {
             <School />
             <Typography variant="h6" component="div">
               Welcome to HireMe! 🎉
+=======
+        {/* Recommended Jobs Section */}
+        <RecommendedJobs limit={6} />
+
+        <Card sx={{ mt: 4, bgcolor: 'primary.light', color: 'white' }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              🎓 Complete Your Profile
+>>>>>>> 9b124f5 (report and student recommendation)
             </Typography>
           </Box>
           <IconButton
