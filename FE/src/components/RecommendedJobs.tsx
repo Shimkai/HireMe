@@ -11,17 +11,24 @@ import {
   Grid,
   LinearProgress,
   Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from '@mui/material';
 import {
   Work as WorkIcon,
   Business as BusinessIcon,
   LocationOn as LocationIcon,
   AttachMoney as MoneyIcon,
-  Schedule as ScheduleIcon,
   TrendingUp as TrendingUpIcon,
+  Visibility as VisibilityIcon,
+  Warning as WarningIcon,
 } from '@mui/icons-material';
 import { recommendationService, JobRecommendation } from '../services/recommendationService';
 import { useAuth } from '../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 
 interface RecommendedJobsProps {
   limit?: number;
@@ -35,9 +42,11 @@ const RecommendedJobs: React.FC<RecommendedJobsProps> = ({
   onJobClick
 }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [recommendations, setRecommendations] = useState<JobRecommendation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [verificationDialogOpen, setVerificationDialogOpen] = useState(false);
 
   useEffect(() => {
     const fetchRecommendations = async () => {
@@ -71,6 +80,17 @@ const RecommendedJobs: React.FC<RecommendedJobsProps> = ({
     if (percentage >= 80) return 'success';
     if (percentage >= 60) return 'warning';
     return 'error';
+  };
+
+  const handleQuickApply = (job: JobRecommendation['job']) => {
+    // Check if student is verified
+    if (!user?.studentDetails?.isVerified) {
+      setVerificationDialogOpen(true);
+      return;
+    }
+    
+    // If verified, proceed with normal application flow
+    onJobClick?.(job);
   };
 
   if (user?.role !== 'Student') {
@@ -140,17 +160,15 @@ const RecommendedJobs: React.FC<RecommendedJobsProps> = ({
                 height: '100%', 
                 display: 'flex', 
                 flexDirection: 'column',
-                cursor: 'pointer',
                 transition: 'transform 0.2s, box-shadow 0.2s',
                 '&:hover': {
                   transform: 'translateY(-2px)',
                   boxShadow: 4,
                 }
               }}
-              onClick={() => onJobClick?.(recommendation.job)}
             >
               <CardContent sx={{ flexGrow: 1 }}>
-                {/* Match Percentage */}
+                {/* Match Score - Keep this as it's unique to recommendations */}
                 <Box sx={{ mb: 2 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                     <Typography variant="body2" color="textSecondary">
@@ -168,7 +186,7 @@ const RecommendedJobs: React.FC<RecommendedJobsProps> = ({
                     variant="determinate"
                     value={recommendation.matchPercentage}
                     color={getMatchColor(recommendation.matchPercentage) as any}
-                    sx={{ height: 8, borderRadius: 4 }}
+                    sx={{ height: 6, borderRadius: 3 }}
                   />
                 </Box>
 
@@ -179,7 +197,7 @@ const RecommendedJobs: React.FC<RecommendedJobsProps> = ({
 
                 {/* Company */}
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <BusinessIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} />
+                  <BusinessIcon sx={{ mr: 1, fontSize: 18, color: 'text.secondary' }} />
                   <Typography variant="body2" color="textSecondary">
                     {recommendation.job.companyName}
                   </Typography>
@@ -187,24 +205,32 @@ const RecommendedJobs: React.FC<RecommendedJobsProps> = ({
 
                 {/* Location */}
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <LocationIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} />
+                  <LocationIcon sx={{ mr: 1, fontSize: 18, color: 'text.secondary' }} />
                   <Typography variant="body2" color="textSecondary">
                     {recommendation.job.location}
                   </Typography>
                 </Box>
 
+                {/* Job Type */}
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <WorkIcon sx={{ mr: 1, fontSize: 18, color: 'text.secondary' }} />
+                  <Typography variant="body2" color="textSecondary">
+                    {recommendation.job.jobType}
+                  </Typography>
+                </Box>
+
                 {/* Salary */}
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <MoneyIcon sx={{ mr: 1, fontSize: 20, color: 'success.main' }} />
+                  <MoneyIcon sx={{ mr: 1, fontSize: 18, color: 'success.main' }} />
                   <Typography variant="body2" color="success.main" fontWeight="bold">
                     {formatSalary(recommendation.job.ctc)}
                   </Typography>
                 </Box>
 
-                {/* Skills */}
+                {/* Skills Preview - Only first 3 */}
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-                    Required Skills:
+                  <Typography variant="caption" color="textSecondary" sx={{ mb: 1, display: 'block' }}>
+                    Skills:
                   </Typography>
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                     {recommendation.job.skillsRequired.slice(0, 3).map((skill, index) => (
@@ -226,62 +252,77 @@ const RecommendedJobs: React.FC<RecommendedJobsProps> = ({
                     )}
                   </Box>
                 </Box>
-
-                {/* Job Type & Work Mode */}
-                <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                  <Chip
-                    label={recommendation.job.jobType}
-                    size="small"
-                    color="secondary"
-                    variant="outlined"
-                  />
-                  <Chip
-                    label={recommendation.job.workMode}
-                    size="small"
-                    color="info"
-                    variant="outlined"
-                  />
-                </Box>
-
-                {/* Application Deadline */}
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <ScheduleIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} />
-                  <Typography variant="body2" color="textSecondary">
-                    Apply by: {formatDate(recommendation.job.applicationDeadline)}
-                  </Typography>
-                </Box>
-
-                {/* Match Reasons */}
-                <Box>
-                  <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-                    Why this matches:
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {recommendation.reasons.slice(0, 2).map((reason, index) => (
-                      <Tooltip key={index} title={reason}>
-                        <Chip
-                          label={reason.length > 30 ? `${reason.substring(0, 30)}...` : reason}
-                          size="small"
-                          color="success"
-                          variant="outlined"
-                        />
-                      </Tooltip>
-                    ))}
-                    {recommendation.reasons.length > 2 && (
-                      <Chip
-                        label={`+${recommendation.reasons.length - 2} more`}
-                        size="small"
-                        color="default"
-                        variant="outlined"
-                      />
-                    )}
-                  </Box>
-                </Box>
               </CardContent>
+
+              {/* Action Buttons */}
+              <Box sx={{ p: 2, pt: 0 }}>
+                <Button
+                  variant="outlined"
+                  fullWidth
+                  startIcon={<VisibilityIcon />}
+                  onClick={() => navigate(`/jobs/${recommendation.job._id}`)}
+                  sx={{ mb: 1 }}
+                >
+                  View Details
+                </Button>
+                <Button
+                  variant="contained"
+                  fullWidth
+                  startIcon={<WorkIcon />}
+                  onClick={() => handleQuickApply(recommendation.job)}
+                >
+                  Quick Apply
+                </Button>
+              </Box>
             </Card>
           </Grid>
         ))}
       </Grid>
+
+      {/* Verification Required Dialog */}
+      <Dialog
+        open={verificationDialogOpen}
+        onClose={() => setVerificationDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <WarningIcon color="warning" />
+          Account Verification Required
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            You need to get your account verified by your Training & Placement Officer before you can apply for jobs.
+          </DialogContentText>
+          <Alert severity="info" sx={{ mb: 2 }}>
+            <Typography variant="body2">
+              <strong>To get verified:</strong>
+            </Typography>
+            <Typography variant="body2" component="div">
+              1. Complete your profile with all required information<br/>
+              2. Contact your TnP office for verification<br/>
+              3. Wait for verification approval
+            </Typography>
+          </Alert>
+          <Typography variant="body2" color="textSecondary">
+            Once verified, you'll be able to apply for jobs and access all placement features.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setVerificationDialogOpen(false)}>
+            Close
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={() => {
+              setVerificationDialogOpen(false);
+              navigate('/profile');
+            }}
+          >
+            Complete Profile
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

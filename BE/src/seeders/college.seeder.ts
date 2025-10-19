@@ -53,6 +53,7 @@ const colleges = [
   { name: 'Anna University Chennai' },
   { name: 'PSG College of Technology Coimbatore' },
   { name: 'Bangalore Institute of Technology' },
+  { name: 'G. H. Raisoni College of Engineering and Management, Pune' },
   
   // State Universities
   { name: 'University of Mumbai' },

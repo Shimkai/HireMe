@@ -7,7 +7,6 @@ import User from '../models/User.model';
 import { sanitizeUser, getPaginationParams, calculatePagination } from '../utils/helpers';
 import ActivityLog from '../models/ActivityLog.model';
 import { notifyStudentVerified } from '../services/notification.service';
-import { config } from '../config/env';
 
 export const getProfile = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
@@ -31,11 +30,14 @@ export const updateProfile = asyncHandler(async (req: Request, res: Response) =>
   }
 
   console.log('Update profile request body:', JSON.stringify(req.body, null, 2));
+  console.log('Request body studentDetails:', JSON.stringify(req.body.studentDetails, null, 2));
 
   const user = await User.findById(req.user.id);
   if (!user) {
     throw ApiError.notFound('User not found');
   }
+  
+  console.log('Existing user studentDetails:', JSON.stringify(user.studentDetails, null, 2));
 
   // Update allowed fields based on role
   const allowedUpdates = ['fullName', 'mobileNumber', 'profileAvatar'];
@@ -55,7 +57,62 @@ export const updateProfile = asyncHandler(async (req: Request, res: Response) =>
         placementStatus: 'Not Placed'
       };
     }
-    user.studentDetails = { ...user.studentDetails, ...req.body.studentDetails };
+    
+    // Set default college if not specified
+    if (!req.body.studentDetails.college && !user.studentDetails.college) {
+      const College = require('../models/College.model').default;
+      const defaultCollege = await College.findOne({ name: 'G. H. Raisoni College of Engineering and Management, Pune' });
+      if (defaultCollege) {
+        req.body.studentDetails.college = defaultCollege._id.toString();
+        console.log('Set default college for student:', defaultCollege.name);
+      }
+    }
+    
+    // Clean undefined values from nested objects before merging
+    const cleanStudentDetails: any = {};
+    Object.keys(req.body.studentDetails).forEach(key => {
+      const value = req.body.studentDetails[key];
+      if (value !== undefined && value !== null && value !== '') {
+        cleanStudentDetails[key] = value;
+      }
+    });
+    
+    // Also clean existing studentDetails to remove undefined nested objects
+    const cleanExistingDetails: any = {};
+    if (user.studentDetails) {
+      Object.keys(user.studentDetails).forEach(key => {
+        const value = (user.studentDetails as any)[key];
+        if (value !== undefined && value !== null && value !== '') {
+          // Additional check for nested objects
+          if (typeof value === 'object' && value !== null) {
+            // Check if it's an empty object or has undefined values
+            const hasValidValues = Object.values(value).some(v => v !== undefined && v !== null && v !== '');
+            if (hasValidValues) {
+              cleanExistingDetails[key] = value;
+            }
+          } else {
+            cleanExistingDetails[key] = value;
+          }
+        }
+      });
+    }
+    
+    // Merge only the clean data
+    user.studentDetails = { ...cleanExistingDetails, ...cleanStudentDetails };
+    
+    // Explicitly remove undefined nested objects that might cause Mongoose validation errors
+    if (user.studentDetails && user.studentDetails.address === undefined) {
+      delete user.studentDetails.address;
+    }
+    if (user.studentDetails && user.studentDetails.tenthMarks === undefined) {
+      delete user.studentDetails.tenthMarks;
+    }
+    if (user.studentDetails && user.studentDetails.twelfthMarks === undefined) {
+      delete user.studentDetails.twelfthMarks;
+    }
+    if (user.studentDetails && user.studentDetails.lastSemesterMarksheet === undefined) {
+      delete user.studentDetails.lastSemesterMarksheet;
+    }
     
     // Automatically set student as unverified when profile is updated
     // This requires TnP verification again
@@ -64,6 +121,7 @@ export const updateProfile = asyncHandler(async (req: Request, res: Response) =>
     }
     
     console.log('After update - user.studentDetails:', user.studentDetails);
+    console.log('Final studentDetails before save:', JSON.stringify(user.studentDetails, null, 2));
   }
   if (req.body.recruiterDetails && user.role === 'Recruiter') {
     user.recruiterDetails = { ...user.recruiterDetails, ...req.body.recruiterDetails };
@@ -290,8 +348,8 @@ export const updateAvatar = asyncHandler(async (req: Request, res: Response) => 
   }
 
   // Update profile avatar with the uploaded file path
-  const avatarUrl = `${config.client.url.replace(':5173', `:${config.port}`)}/uploads/avatars/${req.file.filename}`;
-  user.profileAvatar = avatarUrl;
+  const avatarPath = `/uploads/avatars/${req.file.filename}`;
+  user.profileAvatar = avatarPath;
   await user.save();
 
   // Log activity

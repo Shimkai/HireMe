@@ -4,6 +4,7 @@ import {
   Work,
   Assignment,
   People,
+  Description,
   CheckCircle,
   Analytics,
   Assessment,
@@ -24,29 +25,6 @@ const Sidebar: React.FC<SidebarProps> = ({ open }) => {
   const { user } = useAuth();
 
   const studentMenuItems = [
-<<<<<<< HEAD
-    { text: 'Dashboard', icon: <Dashboard />, path: '/student/dashboard' },
-    { text: 'Browse Jobs', icon: <Work />, path: '/student/jobs' },
-    { text: 'My Applications', icon: <Assignment />, path: '/student/applications' },
-    { text: 'Profile', icon: <People />, path: '/student/profile' },
-  ];
-
-  const recruiterMenuItems = [
-    { text: 'Dashboard', icon: <Dashboard />, path: '/recruiter/dashboard' },
-    { text: 'Post Job', icon: <Work />, path: '/recruiter/post-job' },
-    { text: 'Manage Jobs', icon: <Work />, path: '/recruiter/jobs' },
-    { text: 'Manage Applicants', icon: <People />, path: '/recruiter/applicants' },
-    { text: 'Profile', icon: <People />, path: '/recruiter/profile' },
-  ];
-
-  const tnpMenuItems = [
-    { text: 'Dashboard', icon: <Dashboard />, path: '/tnp/dashboard' },
-    { text: 'Manage Students', icon: <People />, path: '/tnp/students' },
-    { text: 'Approve Jobs', icon: <CheckCircle />, path: '/tnp/jobs/pending' },
-    { text: 'View Applicants', icon: <Assignment />, path: '/tnp/applicants' },
-    { text: 'Reports', icon: <Analytics />, path: '/tnp/reports' },
-    { text: 'Profile', icon: <People />, path: '/tnp/profile' },
-=======
     { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
     { text: 'My Profile', icon: <Person />, path: '/profile' },
     { text: 'Browse Jobs', icon: <Work />, path: '/jobs' },
@@ -69,7 +47,6 @@ const Sidebar: React.FC<SidebarProps> = ({ open }) => {
     { text: 'Approve Jobs', icon: <CheckCircle />, path: '/jobs/pending' },
     { text: 'Analytics', icon: <Analytics />, path: '/analytics' },
     { text: 'Report', icon: <Assessment />, path: '/report' },
->>>>>>> 9b124f5 (report and student recommendation)
   ];
 
   const getMenuItems = () => {

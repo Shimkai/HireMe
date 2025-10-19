@@ -31,6 +31,8 @@ import {
   Upload,
   KeyboardArrowDown,
   Check,
+  VerifiedUser,
+  Warning,
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 import { userService } from '../../services/userService';
@@ -486,6 +488,12 @@ const Profile: React.FC = () => {
           My Profile
         </Typography>
         <Box flexGrow={1} />
+        <Chip
+          icon={user?.studentDetails?.isVerified ? <VerifiedUser /> : <Warning />}
+          label={user?.studentDetails?.isVerified ? 'Verified' : 'Not Verified'}
+          color={user?.studentDetails?.isVerified ? 'success' : 'warning'}
+          size="medium"
+        />
         {editing ? (
           <Box display="flex" gap={1}>
             <Button

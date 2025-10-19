@@ -1,10 +1,11 @@
 import { Container, Grid, Card, CardContent, Typography, Button, Box, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Alert, CircularProgress, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
-import { Edit, Delete, Visibility, Work, LocationOn, Business, CheckCircle, Cancel } from '@mui/icons-material';
+import { Edit, Delete, Visibility, Work, LocationOn, Business, CheckCircle, Cancel, Psychology } from '@mui/icons-material';
 import MainLayout from '../../components/layout/MainLayout';
 import { useState, useEffect } from 'react';
 import { jobService } from '../../services/jobService';
 import { Job } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
+import RecommendedStudents from '../../components/recruiter/RecommendedStudents';
 
 const ManageJobsPage = () => {
   const { user } = useAuth();
@@ -17,6 +18,8 @@ const ManageJobsPage = () => {
   const [processing, setProcessing] = useState(false);
   const [actionError, setActionError] = useState('');
   const [showError, setShowError] = useState(false);
+  const [recommendationsDialog, setRecommendationsDialog] = useState(false);
+  const [selectedJobForRecommendations, setSelectedJobForRecommendations] = useState<string | null>(null);
 
   // Edit form data
   const [editFormData, setEditFormData] = useState({
@@ -144,6 +147,16 @@ const ManageJobsPage = () => {
     setDeleteDialog(false);
     setSelectedJob(null);
     setActionError('');
+  };
+
+  const handleViewRecommendations = (jobId: string) => {
+    setSelectedJobForRecommendations(jobId);
+    setRecommendationsDialog(true);
+  };
+
+  const handleCloseRecommendations = () => {
+    setRecommendationsDialog(false);
+    setSelectedJobForRecommendations(null);
   };
 
   const addSkill = () => {
@@ -329,6 +342,15 @@ const ManageJobsPage = () => {
                             {job.applicationCount} applications
                           </Typography>
                           <Box>
+                            <IconButton 
+                              size="small" 
+                              color="secondary"
+                              onClick={() => handleViewRecommendations(job._id)}
+                              title="View Recommended Students"
+                              disabled={job.status !== 'Approved'}
+                            >
+                              <Psychology />
+                            </IconButton>
                             <IconButton 
                               size="small" 
                               color="primary"
@@ -585,6 +607,15 @@ const ManageJobsPage = () => {
             </Button>
           </DialogActions>
         </Dialog>
+
+        {/* Recommended Students Dialog */}
+        {selectedJobForRecommendations && (
+          <RecommendedStudents
+            jobId={selectedJobForRecommendations}
+            open={recommendationsDialog}
+            onClose={handleCloseRecommendations}
+          />
+        )}
       </Container>
     </MainLayout>
   );

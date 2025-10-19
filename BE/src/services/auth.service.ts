@@ -10,6 +10,16 @@ export const registerUser = async (userData: any): Promise<{ user: any; token: s
     throw ApiError.conflict('Email already registered');
   }
 
+  // Set default college for students if not specified
+  if (userData.role === 'Student' && userData.studentDetails && !userData.studentDetails.college) {
+    const College = require('../models/College.model').default;
+    const defaultCollege = await College.findOne({ name: 'G. H. Raisoni College of Engineering and Management, Pune' });
+    if (defaultCollege) {
+      userData.studentDetails.college = defaultCollege._id;
+      console.log('Set default college for new student:', defaultCollege.name);
+    }
+  }
+
   // Create user
   const user = await User.create(userData);
 

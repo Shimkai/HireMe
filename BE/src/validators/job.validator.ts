@@ -13,6 +13,8 @@ export const createJobSchema = Joi.object({
     allowedCourses: Joi.array().items(Joi.string()),
     maxBacklogs: Joi.number().min(0),
     yearOfCompletion: Joi.array().items(Joi.number()),
+    minTenthPercentage: Joi.number().min(0).max(100),
+    minTwelfthPercentage: Joi.number().min(0).max(100),
   }),
   ctc: Joi.object({
     min: Joi.number().min(0).required(),
@@ -52,6 +54,8 @@ export const updateJobSchema = Joi.object({
     allowedCourses: Joi.array().items(Joi.string()),
     maxBacklogs: Joi.number().min(0),
     yearOfCompletion: Joi.array().items(Joi.number()),
+    minTenthPercentage: Joi.number().min(0).max(100),
+    minTwelfthPercentage: Joi.number().min(0).max(100),
   }),
   ctc: Joi.object({
     min: Joi.number().min(0),

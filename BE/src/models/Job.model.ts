@@ -5,6 +5,8 @@ interface IEligibility {
   allowedCourses?: string[];
   maxBacklogs?: number;
   yearOfCompletion?: number[];
+  minTenthPercentage?: number;
+  minTwelfthPercentage?: number;
 }
 
 interface ICTC {
@@ -106,6 +108,16 @@ const jobSchema = new Schema<IJob>(
           type: Number,
         },
       ],
+      minTenthPercentage: {
+        type: Number,
+        min: [0, '10th percentage cannot be negative'],
+        max: [100, '10th percentage cannot exceed 100'],
+      },
+      minTwelfthPercentage: {
+        type: Number,
+        min: [0, '12th percentage cannot be negative'],
+        max: [100, '12th percentage cannot exceed 100'],
+      },
     },
     ctc: {
       min: {

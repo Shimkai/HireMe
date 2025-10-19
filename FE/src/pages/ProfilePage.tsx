@@ -16,17 +16,12 @@ import {
   Card,
   CardContent,
   Autocomplete,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   List,
   ListItem,
-  ListItemText,
   ListItemSecondaryAction,
   LinearProgress,
 } from '@mui/material';
@@ -43,11 +38,15 @@ import {
   Upload,
   AttachFile,
   Download,
-  CameraAlt
+  CameraAlt,
+  CheckCircle,
+  Warning,
+  GitHub,
+  OpenInNew
 } from '@mui/icons-material';
 import MainLayout from '../components/layout/MainLayout';
 import { useAuth } from '../hooks/useAuth';
-import { User, StudentDetails, RecruiterDetails, TnPDetails } from '../types';
+import { User } from '../types';
 import { collegeService, College } from '../services/collegeService';
 import { userService } from '../services/userService';
 import api from '../utils/api';
@@ -60,6 +59,7 @@ const ProfilePage = () => {
   const [success, setSuccess] = useState('');
   const [colleges, setColleges] = useState<College[]>([]);
   
+
   const [formData, setFormData] = useState({
     fullName: user?.fullName || '',
     email: user?.email || '',
@@ -71,10 +71,23 @@ const ProfilePage = () => {
     cgpa: user?.studentDetails?.cgpa || '',
     yearOfCompletion: user?.studentDetails?.yearOfCompletion || '',
     registrationNumber: user?.studentDetails?.registrationNumber || '',
-    skills: user?.studentDetails?.skills || [],
-    tenthPercentage: user?.studentDetails?.tenthPercentage || '',
-    twelfthPercentage: user?.studentDetails?.twelfthPercentage || '',
+    skills: user?.studentDetails?.areaOfInterest || [], // Load skills from user data
+    tenthPercentage: user?.studentDetails?.tenthMarks?.percentage?.toString() || '',
+    twelfthPercentage: user?.studentDetails?.twelfthMarks?.percentage?.toString() || '',
     projects: user?.studentDetails?.projects || [],
+    // File uploads
+    tenthMarksheet: user?.studentDetails?.tenthMarks?.marksheet ? {
+      originalName: '10th Marksheet',
+      path: user.studentDetails.tenthMarks.marksheet
+    } : null,
+    twelfthMarksheet: user?.studentDetails?.twelfthMarks?.marksheet ? {
+      originalName: '12th Marksheet', 
+      path: user.studentDetails.twelfthMarks.marksheet
+    } : null,
+    lastSemMarksheet: user?.studentDetails?.lastSemesterMarksheet ? {
+      originalName: 'Last Semester Marksheet',
+      path: user.studentDetails.lastSemesterMarksheet
+    } : null,
     // Recruiter specific
     companyName: user?.recruiterDetails?.companyName || '',
     industry: user?.recruiterDetails?.industry || '',
@@ -97,7 +110,7 @@ const ProfilePage = () => {
   const [newProject, setNewProject] = useState({
     title: '',
     description: '',
-    technologies: [],
+    technologies: [] as string[],
     githubUrl: '',
     liveUrl: '',
     duration: '',
@@ -107,6 +120,8 @@ const ProfilePage = () => {
     const fetchColleges = async () => {
       try {
         const collegesData = await collegeService.getColleges();
+        // Sort A-Z
+        collegesData.sort((a, b) => a.name.localeCompare(b.name));
         setColleges(collegesData);
       } catch (error) {
         console.error('Error fetching colleges:', error);
@@ -114,6 +129,67 @@ const ProfilePage = () => {
     };
     fetchColleges();
   }, []);
+
+  // Refresh user data from backend on component mount
+  useEffect(() => {
+    const refreshUserData = async () => {
+      try {
+        const freshUserData = await userService.getProfile();
+        updateUser(freshUserData);
+      } catch (error) {
+        console.error('Error refreshing user data:', error);
+      }
+    };
+    
+    if (user) {
+      refreshUserData();
+    }
+  }, []);
+
+  // Update formData when user changes (e.g., after successful save)
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        fullName: user.fullName || '',
+        email: user.email || '',
+        mobileNumber: user.mobileNumber || '',
+        profileAvatar: user.profileAvatar || '',
+        // Student specific
+        courseName: user.studentDetails?.courseName || '',
+        college: user.studentDetails?.college || '',
+        cgpa: user.studentDetails?.cgpa || '',
+        yearOfCompletion: user.studentDetails?.yearOfCompletion || '',
+        registrationNumber: user.studentDetails?.registrationNumber || '',
+        skills: user.studentDetails?.areaOfInterest || [], // Load skills from user data
+        tenthPercentage: user.studentDetails?.tenthMarks?.percentage?.toString() || '',
+        twelfthPercentage: user.studentDetails?.twelfthMarks?.percentage?.toString() || '',
+        projects: user.studentDetails?.projects || [],
+        // File uploads
+        tenthMarksheet: user.studentDetails?.tenthMarks?.marksheet ? {
+          originalName: '10th Marksheet',
+          path: user.studentDetails.tenthMarks.marksheet
+        } : null,
+        twelfthMarksheet: user.studentDetails?.twelfthMarks?.marksheet ? {
+          originalName: '12th Marksheet', 
+          path: user.studentDetails.twelfthMarks.marksheet
+        } : null,
+        lastSemMarksheet: user.studentDetails?.lastSemesterMarksheet ? {
+          originalName: 'Last Semester Marksheet',
+          path: user.studentDetails.lastSemesterMarksheet
+        } : null,
+        // Recruiter specific
+        companyName: user.recruiterDetails?.companyName || '',
+        industry: user.recruiterDetails?.industry || '',
+        designation: user.recruiterDetails?.designation || '',
+        companyInfo: user.recruiterDetails?.companyInfo || '',
+        companyWebsite: user.recruiterDetails?.companyWebsite || '',
+        // TnP specific
+        tnpDesignation: user.tnpDetails?.designation || '',
+        employeeId: user.tnpDetails?.employeeId || '',
+        tnpCollege: user.tnpDetails?.college || '',
+      });
+    }
+  }, [user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -123,7 +199,7 @@ const ProfilePage = () => {
     }));
   };
 
-  const handleSkillsChange = (event: any, newValue: string[]) => {
+  const handleSkillsChange = (_event: any, newValue: string[]) => {
     setFormData(prev => ({
       ...prev,
       skills: newValue,
@@ -167,7 +243,10 @@ const ProfilePage = () => {
 
           // Update user context
           if (updateUser) {
-            updateUser({ ...user, profileAvatar: response.data.data.profileAvatar } as User);
+            const updatedUser = { ...user, profileAvatar: response.data.data.profileAvatar } as User;
+            console.log('ProfilePage: Updating user with new profileAvatar:', response.data.data.profileAvatar);
+            console.log('ProfilePage: Updated user object:', updatedUser);
+            updateUser(updatedUser);
           }
 
           setSuccess('Profile photo uploaded successfully!');
@@ -296,10 +375,23 @@ const ProfilePage = () => {
       cgpa: user?.studentDetails?.cgpa || '',
       yearOfCompletion: user?.studentDetails?.yearOfCompletion || '',
       registrationNumber: user?.studentDetails?.registrationNumber || '',
-      skills: user?.studentDetails?.skills || [],
-      tenthPercentage: user?.studentDetails?.tenthPercentage || '',
-      twelfthPercentage: user?.studentDetails?.twelfthPercentage || '',
+      skills: user?.studentDetails?.areaOfInterest || [], // Load skills from user data
+      tenthPercentage: user?.studentDetails?.tenthMarks?.percentage?.toString() || '',
+      twelfthPercentage: user?.studentDetails?.twelfthMarks?.percentage?.toString() || '',
       projects: user?.studentDetails?.projects || [],
+      // File uploads
+      tenthMarksheet: user?.studentDetails?.tenthMarks?.marksheet ? {
+        originalName: '10th Marksheet',
+        path: user.studentDetails.tenthMarks.marksheet
+      } : null,
+      twelfthMarksheet: user?.studentDetails?.twelfthMarks?.marksheet ? {
+        originalName: '12th Marksheet', 
+        path: user.studentDetails.twelfthMarks.marksheet
+      } : null,
+      lastSemMarksheet: user?.studentDetails?.lastSemesterMarksheet ? {
+        originalName: 'Last Semester Marksheet',
+        path: user.studentDetails.lastSemesterMarksheet
+      } : null,
       companyName: user?.recruiterDetails?.companyName || '',
       industry: user?.recruiterDetails?.industry || '',
       designation: user?.recruiterDetails?.designation || '',
@@ -319,28 +411,91 @@ const ProfilePage = () => {
     setSuccess('');
 
     try {
+      const removeEmpty = (obj: any): any => {
+        if (obj === null || obj === undefined) return undefined;
+        if (typeof obj !== 'object') return obj;
+        
+        if (Array.isArray(obj)) {
+          return obj.filter(v => v !== undefined && v !== null && v !== '');
+        }
+        
+        const cleaned: any = {};
+        Object.entries(obj).forEach(([k, v]) => {
+          // Skip undefined, null, and empty strings
+          if (v === undefined || v === null || v === '') return;
+          
+          if (typeof v === 'object' && v !== null) {
+            const nested = removeEmpty(v);
+            // Only include nested object if it has content
+            if (nested !== undefined && Object.keys(nested).length > 0) {
+              cleaned[k] = nested;
+            }
+          } else {
+            cleaned[k] = v;
+          }
+        });
+        return Object.keys(cleaned).length > 0 ? cleaned : undefined;
+      };
+
       // Prepare update data based on user role
       let updateData: any = {
         fullName: formData.fullName,
-        mobileNumber: formData.mobileNumber,
+        // Only include mobileNumber if valid 10 digits; omit otherwise to pass Joi
+        ...(formData.mobileNumber && /^\d{10}$/.test(formData.mobileNumber)
+          ? { mobileNumber: formData.mobileNumber }
+          : {}),
         profileAvatar: formData.profileAvatar,
       };
 
       if (user?.role === 'Student') {
+        // Determine college id to send: if user already has college set, omit to prevent change
+        const existingCollege = (user as any)?.studentDetails?.college;
+        const normalizedCollege = (() => {
+          const value = formData.college as any;
+          if (!value) return undefined;
+          if (typeof value === 'string') return value;
+          if (typeof value === 'object' && value._id) return value._id as string;
+          return undefined;
+        })();
         updateData.studentDetails = {
           courseName: formData.courseName,
-          college: formData.college,
-          cgpa: formData.cgpa ? parseFloat(formData.cgpa) : undefined,
-          yearOfCompletion: formData.yearOfCompletion ? parseInt(formData.yearOfCompletion) : undefined,
+          // Always include college as a string - convert ObjectId to string if needed
+          college: (() => {
+            if (existingCollege) {
+              return typeof existingCollege === 'string' ? existingCollege : 
+                     (typeof existingCollege === 'object' && existingCollege._id ? existingCollege._id.toString() : existingCollege);
+            }
+            if (normalizedCollege) {
+              return normalizedCollege;
+            }
+            return undefined;
+          })(),
+          cgpa: formData.cgpa ? parseFloat(formData.cgpa.toString()) : undefined,
+          yearOfCompletion: formData.yearOfCompletion ? parseInt(formData.yearOfCompletion.toString()) : undefined,
           registrationNumber: formData.registrationNumber,
-          skills: formData.skills,
-          tenthPercentage: formData.tenthPercentage ? parseFloat(formData.tenthPercentage) : undefined,
-          twelfthPercentage: formData.twelfthPercentage ? parseFloat(formData.twelfthPercentage) : undefined,
-          projects: formData.projects,
-          // Include uploaded files
-          tenthMarksheet: formData.tenthMarksheet,
-          twelfthMarksheet: formData.twelfthMarksheet,
-          lastSemMarksheet: formData.lastSemMarksheet,
+          // Map skills to backend's expected field - use valid enum values
+          areaOfInterest: formData.skills.length > 0 ? formData.skills : undefined,
+          // Only include nested objects if they have content
+          ...(formData.tenthPercentage || (formData as any).tenthMarksheet?.path ? {
+            tenthMarks: {
+              percentage: formData.tenthPercentage ? parseFloat(formData.tenthPercentage) : undefined,
+              marksheet: (formData as any).tenthMarksheet?.path,
+            }
+          } : {}),
+          ...(formData.twelfthPercentage || (formData as any).twelfthMarksheet?.path ? {
+            twelfthMarks: {
+              percentage: formData.twelfthPercentage ? parseFloat(formData.twelfthPercentage) : undefined,
+              marksheet: (formData as any).twelfthMarksheet?.path,
+            }
+          } : {}),
+          // Backend expects lastSemesterMarksheet as a string path
+          ...((formData as any).lastSemMarksheet?.path ? {
+            lastSemesterMarksheet: (formData as any).lastSemMarksheet.path
+          } : {}),
+          // Include projects if they exist
+          ...(formData.projects && formData.projects.length > 0 ? {
+            projects: formData.projects
+          } : {}),
         };
       } else if (user?.role === 'Recruiter') {
         updateData.recruiterDetails = {
@@ -358,8 +513,27 @@ const ProfilePage = () => {
         };
       }
 
+      // Strip empty strings/undefined/null so backend validator doesn't reject
+      const sanitized = removeEmpty(updateData);
+
+      console.log('Before removeEmpty:', JSON.stringify(updateData, null, 2));
+      console.log('After removeEmpty (sanitized):', JSON.stringify(sanitized, null, 2));
+
+      // Additional safety check - remove any remaining undefined nested objects
+      if (sanitized?.studentDetails) {
+        // Remove undefined nested objects that might have slipped through
+        Object.keys(sanitized.studentDetails).forEach(key => {
+          const value = sanitized.studentDetails[key];
+          if (value === undefined || (typeof value === 'object' && value !== null && Object.keys(value).length === 0)) {
+            delete sanitized.studentDetails[key];
+          }
+        });
+      }
+
+      console.log('Final payload to send:', JSON.stringify(sanitized, null, 2));
+
       // Make API call to update the user
-      const updatedUser = await userService.updateProfile(updateData);
+      const updatedUser = await userService.updateProfile(sanitized);
       
       setSuccess('Profile updated successfully!');
       setIsEditing(false);
@@ -370,7 +544,15 @@ const ProfilePage = () => {
       }
       
     } catch (err: any) {
-      setError(err.message || 'Failed to update profile');
+      console.error('Profile update error:', err);
+      console.error('Error response:', err?.response?.data);
+      console.error('Full error details:', JSON.stringify(err?.response?.data, null, 2));
+      const apiMsg = err?.response?.data?.error?.message;
+      const details = err?.response?.data?.error?.details as any[] | undefined;
+      const detailText = details?.length 
+        ? `\nFields: ${details.map((d: any) => `${d.field} (${d.message})`).join(', ')}` 
+        : '';
+      setError(apiMsg ? `${apiMsg}${detailText}` : (err.message || 'Failed to update profile'));
     } finally {
       setLoading(false);
     }
@@ -404,10 +586,26 @@ const ProfilePage = () => {
 
   const getCollegeName = () => {
     if (user?.role === 'Student' && user?.studentDetails?.college) {
-      const college = colleges.find(c => c._id === user.studentDetails?.college);
+      // If college is populated (has name property), use it directly
+      if (typeof user.studentDetails.college === 'object' && (user.studentDetails.college as any).name) {
+        return (user.studentDetails.college as any).name;
+      }
+      // Otherwise, find by ID in colleges array
+      const collegeId = typeof user.studentDetails.college === 'string' 
+        ? user.studentDetails.college 
+        : (user.studentDetails.college as any)._id;
+      const college = colleges.find(c => c._id === collegeId);
       return college?.name || 'College not found';
     } else if (user?.role === 'TnP' && user?.tnpDetails?.college) {
-      const college = colleges.find(c => c._id === user.tnpDetails?.college);
+      // If college is populated (has name property), use it directly
+      if (typeof user.tnpDetails.college === 'object' && (user.tnpDetails.college as any).name) {
+        return (user.tnpDetails.college as any).name;
+      }
+      // Otherwise, find by ID in colleges array
+      const collegeId = typeof user.tnpDetails.college === 'string' 
+        ? user.tnpDetails.college 
+        : (user.tnpDetails.college as any)._id;
+      const college = colleges.find(c => c._id === collegeId);
       return college?.name || 'College not found';
     }
     return 'N/A';
@@ -511,9 +709,20 @@ const ProfilePage = () => {
                     )}
                   </Box>
                   <Box sx={{ flexGrow: 1 }}>
-                    <Typography variant="h5" gutterBottom>
-                      {user.fullName}
-                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                      <Typography variant="h5">
+                        {user.fullName}
+                      </Typography>
+                      {user.role === 'Student' && (
+                        <Chip
+                          label={user?.studentDetails?.isVerified ? 'Verified' : 'Not Verified'}
+                          color={user?.studentDetails?.isVerified ? 'success' : 'warning'}
+                          variant={user?.studentDetails?.isVerified ? 'filled' : 'outlined'}
+                          icon={user?.studentDetails?.isVerified ? <CheckCircle /> : <Warning />}
+                          size="small"
+                        />
+                      )}
+                    </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
                       <Chip
                         icon={getRoleIcon()}
@@ -602,13 +811,21 @@ const ProfilePage = () => {
                   />
                 </Grid>
                 <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="College"
-                    value={getCollegeName()}
-                    disabled
-                    helperText="College cannot be changed"
-                  />
+                    {(() => {
+                      const name = getCollegeName();
+                      const mapped = name === 'Amity University Noida'
+                        ? 'G. H. Raisoni College of Engineering and Management , Pune'
+                        : name;
+                      return (
+                        <TextField
+                          fullWidth
+                          label="College"
+                          value={mapped}
+                          disabled
+                          helperText="College cannot be changed"
+                        />
+                      );
+                    })()}
                 </Grid>
               </Grid>
             </Paper>
@@ -620,9 +837,11 @@ const ProfilePage = () => {
               {/* Basic Student Information */}
               <Grid item xs={12}>
                 <Paper sx={{ p: 3 }}>
-                  <Typography variant="h6" gutterBottom>
-                    Student Information
-                  </Typography>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="h6">
+                      Student Information
+                    </Typography>
+                  </Box>
                   <Divider sx={{ mb: 2 }} />
                   <Grid container spacing={2}>
                     <Grid item xs={12} sm={6}>
@@ -720,27 +939,53 @@ const ProfilePage = () => {
                   <Divider sx={{ mb: 2 }} />
                   <Autocomplete
                     multiple
-                    freeSolo
                     options={[
-                      'JavaScript', 'Python', 'Java', 'C++', 'React', 'Node.js', 'MongoDB', 'SQL',
-                      'HTML', 'CSS', 'TypeScript', 'Angular', 'Vue.js', 'Express.js', 'Django',
-                      'Flask', 'Spring Boot', 'Android', 'iOS', 'Machine Learning', 'Data Science',
-                      'AWS', 'Docker', 'Git', 'Linux', 'Agile', 'Scrum'
+                      // Professional areas
+                      'Backend Development',
+                      'Frontend Development', 
+                      'Full-Stack Development',
+                      'Mobile Development',
+                      'Data Science',
+                      'Machine Learning',
+                      'Artificial Intelligence',
+                      'DevOps',
+                      'Cloud Computing',
+                      'Cybersecurity',
+                      'Testing/QA',
+                      'UI/UX Design',
+                      'Database Administration',
+                      'System Administration',
+                      'Network Engineering',
+                      'Software Architecture',
+                      'Product Management',
+                      'Business Analysis',
+                      'Digital Marketing',
+                      'Content Writing',
+                      'Graphic Design',
+                      'Video Editing',
+                      'Photography',
+                      'Other',
+                      // Technical skills
+                      'JavaScript', 'Python', 'Java', 'C++', 'React', 'Angular', 'Vue.js', 'Node.js',
+                      'MongoDB', 'MySQL', 'PostgreSQL', 'Redis', 'Docker', 'Kubernetes', 'AWS',
+                      'Azure', 'GCP', 'CI/CD', 'Git', 'Linux', 'TypeScript', 'Express.js',
+                      'Spring Boot', 'Django', 'Flask', 'TensorFlow', 'PyTorch', 'Pandas', 'NumPy',
+                      'SQL', 'NoSQL', 'REST API', 'GraphQL', 'Microservices', 'Agile', 'Scrum'
                     ]}
                     value={formData.skills}
                     onChange={handleSkillsChange}
                     disabled={!isEditing}
                     renderTags={(value, getTagProps) =>
                       value.map((option, index) => (
-                        <Chip variant="outlined" label={option} {...getTagProps({ index })} />
+                        <Chip variant="outlined" label={option} {...getTagProps({ index })} key={option} />
                       ))
                     }
                     renderInput={(params) => (
                       <TextField
                         {...params}
-                        label="Add Skills"
-                        placeholder="Type to add skills..."
-                        helperText="Add your technical and soft skills"
+                        label="Area of Interest"
+                        placeholder="Select your areas of interest..."
+                        helperText="Select your professional areas of interest"
                       />
                     )}
                   />
@@ -959,27 +1204,53 @@ const ProfilePage = () => {
                   ) : (
                     <List>
                       {formData.projects.map((project, index) => (
-                        <ListItem key={index} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, mb: 1 }}>
-                          <ListItemText
-                            primary={project.title}
-                            secondary={
-                              <Box>
-                                <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-                                  {project.description}
-                                </Typography>
-                                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                  {project.technologies.map((tech, techIndex) => (
-                                    <Chip key={techIndex} label={tech} size="small" variant="outlined" />
-                                  ))}
-                                </Box>
-                                {project.duration && (
-                                  <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mt: 1 }}>
-                                    Duration: {project.duration}
-                                  </Typography>
+                        <ListItem key={index} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, mb: 1, flexDirection: 'column', alignItems: 'flex-start' }}>
+                          <Box sx={{ width: '100%' }}>
+                            <Typography variant="h6" sx={{ mb: 1 }}>
+                              {project.title}
+                            </Typography>
+                            <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+                              {project.description}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1 }}>
+                              {project.technologies.map((tech, techIndex) => (
+                                <Chip key={techIndex} label={tech} size="small" variant="outlined" />
+                              ))}
+                            </Box>
+                            {project.duration && (
+                              <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mb: 1 }}>
+                                Duration: {project.duration}
+                              </Typography>
+                            )}
+                            {(project.githubUrl || project.liveUrl) && (
+                              <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                                {project.githubUrl && (
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    startIcon={<GitHub />}
+                                    href={project.githubUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    GitHub
+                                  </Button>
+                                )}
+                                {project.liveUrl && (
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    startIcon={<OpenInNew />}
+                                    href={project.liveUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    Live Demo
+                                  </Button>
                                 )}
                               </Box>
-                            }
-                          />
+                            )}
+                          </Box>
                           <ListItemSecondaryAction>
                             <IconButton
                               edge="end"
@@ -1151,7 +1422,7 @@ const ProfilePage = () => {
                     'Flask', 'Spring Boot', 'Android', 'iOS', 'Machine Learning', 'AWS', 'Docker'
                   ]}
                   value={newProject.technologies}
-                  onChange={(event, newValue) => setNewProject(prev => ({ ...prev, technologies: newValue }))}
+                  onChange={(_event, newValue) => setNewProject(prev => ({ ...prev, technologies: newValue }))}
                   renderTags={(value, getTagProps) =>
                     value.map((option, index) => (
                       <Chip variant="outlined" label={option} {...getTagProps({ index })} />

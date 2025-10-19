@@ -24,7 +24,9 @@ const PostJobPage = () => {
       minCGPA: 0,
       allowedCourses: [] as string[],
       maxBacklogs: 0,
-      yearOfCompletion: [] as number[]
+      yearOfCompletion: [] as number[],
+      minTenthPercentage: 0,
+      minTwelfthPercentage: 0
     }
   });
 
@@ -296,7 +298,73 @@ const PostJobPage = () => {
                 </Grid>
 
                 <Grid item xs={12}>
-                  <Typography variant="h6" gutterBottom>
+                  <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+                    Eligibility Criteria
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={12} md={4}>
+                  <TextField
+                    fullWidth
+                    label="Minimum CGPA"
+                    type="number"
+                    value={formData.eligibility.minCGPA}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      eligibility: { ...prev.eligibility, minCGPA: parseFloat(e.target.value) || 0 }
+                    }))}
+                    inputProps={{ min: 0, max: 10, step: 0.1 }}
+                    placeholder="e.g., 7.0"
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={4}>
+                  <TextField
+                    fullWidth
+                    label="Minimum 10th Percentage"
+                    type="number"
+                    value={formData.eligibility.minTenthPercentage}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      eligibility: { ...prev.eligibility, minTenthPercentage: parseFloat(e.target.value) || 0 }
+                    }))}
+                    inputProps={{ min: 0, max: 100, step: 0.01 }}
+                    placeholder="e.g., 60"
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={4}>
+                  <TextField
+                    fullWidth
+                    label="Minimum 12th Percentage"
+                    type="number"
+                    value={formData.eligibility.minTwelfthPercentage}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      eligibility: { ...prev.eligibility, minTwelfthPercentage: parseFloat(e.target.value) || 0 }
+                    }))}
+                    inputProps={{ min: 0, max: 100, step: 0.01 }}
+                    placeholder="e.g., 60"
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Maximum Backlogs Allowed"
+                    type="number"
+                    value={formData.eligibility.maxBacklogs}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      eligibility: { ...prev.eligibility, maxBacklogs: parseInt(e.target.value) || 0 }
+                    }))}
+                    inputProps={{ min: 0 }}
+                    placeholder="e.g., 0"
+                  />
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
                     Required Skills
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>

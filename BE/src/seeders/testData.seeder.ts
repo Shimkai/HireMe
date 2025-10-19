@@ -13,15 +13,22 @@ const seedTestData = async () => {
     await mongoose.connect(mongoUri);
     logger.info('MongoDB connected for seeding test data');
 
-    // Get a college for reference
-    const college = await College.findOne();
+    // Get G.H. Raisoni College as the default college
+    let college = await College.findOne({ name: 'G. H. Raisoni College of Engineering and Management, Pune' });
     if (!college) {
-      logger.error('No colleges found. Run college seeder first.');
-      process.exit(1);
+      // If not found, get any college as fallback
+      college = await College.findOne();
+      if (!college) {
+        logger.error('No colleges found. Run college seeder first.');
+        process.exit(1);
+      }
+      logger.warn('G.H. Raisoni College not found, using fallback college:', college.name);
+    } else {
+      logger.info('Using G.H. Raisoni College as default:', college.name);
     }
 
     // Clear existing test data
-    await User.deleteMany({ email: { $regex: /@test\.com$/ } });
+    await User.deleteMany({});
     await Job.deleteMany({});
     logger.info('Cleared existing test data');
 

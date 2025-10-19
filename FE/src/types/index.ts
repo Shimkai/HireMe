@@ -15,34 +15,24 @@ export interface User {
 
 export interface StudentDetails {
   courseName: string;
-  college: string; // ObjectId as string from backend
+  college: string | { _id: string; name: string }; // Can be ObjectId string or populated object
   isVerified: boolean;
   placementStatus: 'Placed' | 'Not Placed';
   cgpa?: number;
   yearOfCompletion?: number;
   registrationNumber?: string;
-  // Additional fields
+  // Backend structure
+  areaOfInterest?: string[];
   skills?: string[];
-  tenthPercentage?: number;
-  twelfthPercentage?: number;
-  tenthMarksheet?: {
-    filename: string;
-    originalName: string;
-    path: string;
-    uploadedAt: string;
+  tenthMarks?: {
+    percentage?: number;
+    marksheet?: string;
   };
-  twelfthMarksheet?: {
-    filename: string;
-    originalName: string;
-    path: string;
-    uploadedAt: string;
+  twelfthMarks?: {
+    percentage?: number;
+    marksheet?: string;
   };
-  lastSemMarksheet?: {
-    filename: string;
-    originalName: string;
-    path: string;
-    uploadedAt: string;
-  };
+  lastSemesterMarksheet?: string;
   projects?: Array<{
     title: string;
     description: string;
@@ -51,6 +41,13 @@ export interface StudentDetails {
     liveUrl?: string;
     duration?: string;
   }>;
+  address?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+    country?: string;
+  };
 }
 
 export interface RecruiterDetails {
@@ -144,4 +141,7 @@ export interface Notification {
 export interface DashboardStats {
   [key: string]: any;
 }
+
+// Re-export notification types
+export * from './notification';
 

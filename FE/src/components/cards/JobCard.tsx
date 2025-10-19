@@ -14,11 +14,8 @@ import {
 import {
   LocationOn,
   Business,
-  Schedule,
   AttachMoney,
-  School,
 } from '@mui/icons-material';
-import { format } from 'date-fns';
 
 interface JobCardProps {
   job: {
@@ -97,6 +94,7 @@ const JobCard: React.FC<JobCardProps> = ({
       }}
     >
       <CardContent sx={{ flexGrow: 1 }}>
+        {/* Company Logo and Basic Info */}
         <Box display="flex" alignItems="center" gap={2} mb={2}>
           <Avatar
             sx={{
@@ -122,6 +120,7 @@ const JobCard: React.FC<JobCardProps> = ({
           />
         </Box>
 
+        {/* Key Details Only */}
         <Stack spacing={1} mb={2}>
           <Box display="flex" alignItems="center" gap={1}>
             <LocationOn fontSize="small" color="action" />
@@ -137,29 +136,13 @@ const JobCard: React.FC<JobCardProps> = ({
               {formatCurrency(job.ctc.min)} - {formatCurrency(job.ctc.max)}
             </Typography>
           </Box>
-          <Box display="flex" alignItems="center" gap={1}>
-            <Schedule fontSize="small" color="action" />
-            <Typography
-              variant="body2"
-              color={isDeadlinePassed ? 'error.main' : 'text.secondary'}
-            >
-              Deadline: {format(new Date(job.applicationDeadline), 'MMM dd, yyyy')}
-            </Typography>
-          </Box>
-          {job.eligibility.minCGPA && (
-            <Box display="flex" alignItems="center" gap={1}>
-              <School fontSize="small" color="action" />
-              <Typography variant="body2">
-                Min CGPA: {job.eligibility.minCGPA}
-              </Typography>
-            </Box>
-          )}
         </Stack>
 
+        {/* Skills Preview - Only show first 3 */}
         {job.skillsRequired.length > 0 && (
           <Box mb={2}>
             <Typography variant="caption" color="text.secondary" gutterBottom>
-              Skills Required:
+              Skills:
             </Typography>
             <Box display="flex" flexWrap="wrap" gap={0.5} mt={0.5}>
               {job.skillsRequired.slice(0, 3).map((skill, index) => (
@@ -181,6 +164,7 @@ const JobCard: React.FC<JobCardProps> = ({
           </Box>
         )}
 
+        {/* Recruiter specific info */}
         {userRole === 'Recruiter' && (
           <Typography variant="body2" color="text.secondary">
             {job.applicationCount} applications received

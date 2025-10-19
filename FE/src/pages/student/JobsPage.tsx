@@ -1,5 +1,5 @@
-import { Container, Grid, Card, CardContent, Typography, Button, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, IconButton, TextField, InputAdornment, Dialog, DialogTitle, DialogContent, DialogActions, Alert, CircularProgress } from '@mui/material';
-import { Search, Work, LocationOn, Business, Send, Visibility, AttachFile } from '@mui/icons-material';
+import { Container, Grid, Card, CardContent, Typography, Button, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, IconButton, TextField, InputAdornment, Dialog, DialogTitle, DialogContent, DialogActions, Alert, CircularProgress, DialogContentText } from '@mui/material';
+import { Search, Work, LocationOn, Business, Send, Visibility, AttachFile, Warning } from '@mui/icons-material';
 import MainLayout from '../../components/layout/MainLayout';
 import RecommendedJobs from '../../components/RecommendedJobs';
 import { useState, useEffect } from 'react';
@@ -7,9 +7,11 @@ import { useAuth } from '../../hooks/useAuth';
 import { jobService } from '../../services/jobService';
 import { applicationService } from '../../services/applicationService';
 import { Job } from '../../types';
+import { useNavigate } from 'react-router-dom';
 
 const JobsPage = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -20,6 +22,7 @@ const JobsPage = () => {
   const [applying, setApplying] = useState(false);
   const [applyError, setApplyError] = useState('');
   const [applySuccess, setApplySuccess] = useState('');
+  const [verificationDialogOpen, setVerificationDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchJobs();
@@ -43,6 +46,13 @@ const JobsPage = () => {
   };
 
   const handleApplyClick = (job: Job) => {
+    // Check if student is verified
+    if (!user?.studentDetails?.isVerified) {
+      setVerificationDialogOpen(true);
+      return;
+    }
+    
+    // If verified, proceed with normal application flow
     setSelectedJob(job);
     setApplyDialogOpen(true);
     setApplyError('');
@@ -256,28 +266,24 @@ const JobsPage = () => {
                     ₹{job.ctc?.min}-{job.ctc?.max} {job.ctc?.currency || 'LPA'}
                   </Typography>
                   
-                  <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-                    {job.description}
-                  </Typography>
-                  
                   <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" color="textSecondary" gutterBottom>
-                      Skills Required:
+                    <Typography variant="caption" color="textSecondary" sx={{ mb: 1, display: 'block' }}>
+                      Skills:
                     </Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {job.skillsRequired.map((skill, index) => (
-                        <Chip key={index} label={skill} size="small" variant="outlined" />
+                      {job.skillsRequired?.slice(0, 3).map((skill, index) => (
+                        <Chip key={index} label={skill} size="small" variant="outlined" color="primary" />
                       ))}
+                      {job.skillsRequired?.length > 3 && (
+                        <Chip
+                          label={`+${job.skillsRequired.length - 3} more`}
+                          size="small"
+                          variant="outlined"
+                          color="default"
+                        />
+                      )}
                     </Box>
                   </Box>
-                  
-                  <Typography variant="body2" color="textSecondary">
-                    Deadline: {new Date(job.applicationDeadline).toLocaleDateString()}
-                  </Typography>
-                  
-                  <Typography variant="body2" color="textSecondary">
-                    Applications: {job.applicationCount}
-                  </Typography>
                 </CardContent>
                 
                 <Box sx={{ p: 2, pt: 0 }}>
@@ -295,6 +301,7 @@ const JobsPage = () => {
                     fullWidth
                     variant="outlined"
                     startIcon={<Visibility />}
+                    onClick={() => navigate(`/jobs/${job._id}`)}
                   >
                     View Details
                   </Button>
@@ -365,6 +372,51 @@ const JobsPage = () => {
               disabled={!resumeFile || applying}
             >
               {applying ? <CircularProgress size={20} /> : 'Submit Application'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Verification Required Dialog */}
+        <Dialog
+          open={verificationDialogOpen}
+          onClose={() => setVerificationDialogOpen(false)}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Warning color="warning" />
+            Account Verification Required
+          </DialogTitle>
+          <DialogContent>
+            <DialogContentText sx={{ mb: 2 }}>
+              You need to get your account verified by your Training & Placement Officer before you can apply for jobs.
+            </DialogContentText>
+            <Alert severity="info" sx={{ mb: 2 }}>
+              <Typography variant="body2">
+                <strong>To get verified:</strong>
+              </Typography>
+              <Typography variant="body2" component="div">
+                1. Complete your profile with all required information<br/>
+                2. Contact your TnP office for verification<br/>
+                3. Wait for verification approval
+              </Typography>
+            </Alert>
+            <Typography variant="body2" color="textSecondary">
+              Once verified, you'll be able to apply for jobs and access all placement features.
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setVerificationDialogOpen(false)}>
+              Close
+            </Button>
+            <Button 
+              variant="contained" 
+              onClick={() => {
+                setVerificationDialogOpen(false);
+                navigate('/profile');
+              }}
+            >
+              Complete Profile
             </Button>
           </DialogActions>
         </Dialog>

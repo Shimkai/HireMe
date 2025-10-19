@@ -1,78 +1,15 @@
 import api from '../utils/api';
-<<<<<<< HEAD
-
-export interface Application {
-  _id: string;
-  jobId: {
-    _id: string;
-    title: string;
-    companyName: string;
-    location: string;
-    jobType: string;
-    ctc: {
-      min: number;
-      max: number;
-      currency: string;
-    };
-    applicationDeadline: string;
-  };
-  studentId: string;
-  status: string;
-  resume: {
-    filename: string;
-    originalName: string;
-    mimetype: string;
-    size: number;
-    path: string;
-    uploadedAt: string;
-  };
-  appliedAt: string;
-  reviewedAt?: string;
-  reviewedBy?: string;
-  interviewDetails?: {
-    scheduledDate?: string;
-    scheduledTime?: string;
-    interviewMode?: string;
-    meetingLink?: string;
-    venue?: string;
-    instructions?: string;
-    round: number;
-  };
-  recruiterNotes?: string;
-  rejectionReason?: string;
-  viewedByRecruiter: boolean;
-  viewedAt?: string;
-}
-=======
 import { Application } from '../types';
->>>>>>> 9b124f5 (report and student recommendation)
 
 export interface ApplicationResponse {
   success: boolean;
   data: Application;
-<<<<<<< HEAD
-  message?: string;
-=======
   message: string;
->>>>>>> 9b124f5 (report and student recommendation)
 }
 
 export interface ApplicationsResponse {
   success: boolean;
   data: Application[];
-<<<<<<< HEAD
-  pagination?: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
-}
-
-class ApplicationService {
-  async applyToJob(jobId: string, formData: FormData): Promise<ApplicationResponse> {
-    const response = await api.post(`/applications/apply/${jobId}`, formData, {
-=======
   pagination: any;
   message: string;
 }
@@ -83,63 +20,10 @@ export const applicationService = {
     formData.append('resume', resumeFile);
     
     const response = await api.post<ApplicationResponse>(`/applications/apply/${jobId}`, formData, {
->>>>>>> 9b124f5 (report and student recommendation)
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
-<<<<<<< HEAD
-    return response.data;
-  }
-
-  async getMyApplications(params?: any): Promise<ApplicationsResponse> {
-    const response = await api.get('/applications/my-applications', { params });
-    return response.data;
-  }
-
-  async getJobApplications(jobId: string, params?: any): Promise<ApplicationsResponse> {
-    const response = await api.get(`/applications/job/${jobId}`, { params });
-    return response.data;
-  }
-
-  async updateApplicationStatus(
-    applicationId: string,
-    statusData: {
-      status: string;
-      recruiterNotes?: string;
-      interviewDetails?: {
-        scheduledDate?: string;
-        scheduledTime?: string;
-        interviewMode?: string;
-        meetingLink?: string;
-        venue?: string;
-        instructions?: string;
-        round?: number;
-      };
-    }
-  ): Promise<ApplicationResponse> {
-    const response = await api.put(`/applications/${applicationId}/status`, statusData);
-    return response.data;
-  }
-
-  async withdrawApplication(applicationId: string): Promise<{ success: boolean; message: string }> {
-    const response = await api.delete(`/applications/${applicationId}`);
-    return response.data;
-  }
-
-  async getRecruiterApplications(params?: any): Promise<ApplicationsResponse> {
-    const response = await api.get('/applications/recruiter', { params });
-    return response.data;
-  }
-
-  async getAllApplications(params?: any): Promise<ApplicationsResponse> {
-    const response = await api.get('/applications/all', { params });
-    return response.data;
-  }
-}
-
-export const applicationService = new ApplicationService();
-=======
     
     return response.data.data;
   },
@@ -189,4 +73,3 @@ export const applicationService = new ApplicationService();
     await api.delete(`/applications/${applicationId}`);
   },
 };
->>>>>>> 9b124f5 (report and student recommendation)

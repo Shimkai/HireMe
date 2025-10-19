@@ -28,6 +28,14 @@ interface IStudentDetails {
   lastSemesterMarksheet?: string;
   areaOfInterest?: string[];
   skills?: string[];
+  projects?: Array<{
+    title: string;
+    description: string;
+    technologies: string[];
+    githubUrl?: string;
+    liveUrl?: string;
+    duration?: string;
+  }>;
 }
 
 // Recruiter Details Interface
@@ -147,19 +155,28 @@ const userSchema = new Schema<IUser>(
         sparse: true,
       },
       address: {
-        street: { type: String },
-        city: { type: String },
-        state: { type: String },
-        pincode: { type: String },
-        country: { type: String, default: 'India' },
+        type: {
+          street: { type: String },
+          city: { type: String },
+          state: { type: String },
+          pincode: { type: String },
+          country: { type: String, default: 'India' },
+        },
+        default: undefined
       },
       tenthMarks: {
-        percentage: { type: Number, min: 0, max: 100 },
-        marksheet: { type: String }, // File path
+        type: {
+          percentage: { type: Number, min: 0, max: 100 },
+          marksheet: { type: String }, // File path
+        },
+        default: undefined
       },
       twelfthMarks: {
-        percentage: { type: Number, min: 0, max: 100 },
-        marksheet: { type: String }, // File path
+        type: {
+          percentage: { type: Number, min: 0, max: 100 },
+          marksheet: { type: String }, // File path
+        },
+        default: undefined
       },
       lastSemesterMarksheet: {
         type: String, // File path
@@ -190,7 +207,13 @@ const userSchema = new Schema<IUser>(
           'Graphic Design',
           'Video Editing',
           'Photography',
-          'Other'
+          'Other',
+          // Technical skills from registration
+          'JavaScript', 'Python', 'Java', 'C++', 'React', 'Angular', 'Vue.js', 'Node.js',
+          'MongoDB', 'MySQL', 'PostgreSQL', 'Redis', 'Docker', 'Kubernetes', 'AWS',
+          'Azure', 'GCP', 'CI/CD', 'Git', 'Linux', 'TypeScript', 'Express.js',
+          'Spring Boot', 'Django', 'Flask', 'TensorFlow', 'PyTorch', 'Pandas', 'NumPy',
+          'SQL', 'NoSQL', 'REST API', 'GraphQL', 'Microservices', 'Agile', 'Scrum'
         ],
         trim: true,
       }],
@@ -198,6 +221,14 @@ const userSchema = new Schema<IUser>(
         type: [String],
         default: [],
       },
+      projects: [{
+        title: { type: String, required: true },
+        description: { type: String, required: true },
+        technologies: [{ type: String }],
+        githubUrl: { type: String },
+        liveUrl: { type: String },
+        duration: { type: String },
+      }],
     },
 
     // Recruiter Details

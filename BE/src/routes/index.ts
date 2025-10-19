@@ -9,6 +9,7 @@ import collegeRoutes from './college.routes';
 import analyticsRoutes from './analytics.routes';
 import reportRoutes from './report.routes';
 import recommendationRoutes from './recommendation.routes';
+import studentRecommendationRoutes from './studentRecommendation.routes';
 
 const router = Router();
 
@@ -22,6 +23,7 @@ router.use('/colleges', collegeRoutes);
 router.use('/analytics', analyticsRoutes);
 router.use('/analytics', reportRoutes);
 router.use('/recommendations', recommendationRoutes);
+router.use('/student-recommendations', studentRecommendationRoutes);
 
 export default router;
 

@@ -24,6 +24,7 @@ import JobCard from '../../components/cards/JobCard';
 import { useAuth } from '../../hooks/useAuth';
 import { jobService } from '../../services/jobService';
 import { applicationService } from '../../services/applicationService';
+import { useNavigate } from 'react-router-dom';
 
 interface Job {
   _id: string;
@@ -58,6 +59,7 @@ interface Filters {
 
 const JobListing: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -159,11 +161,11 @@ const JobListing: React.FC = () => {
 
   const handleApply = (jobId: string) => {
     // Navigate to job details page for application
-    window.location.href = `/student/jobs/${jobId}`;
+    navigate(`/jobs/${jobId}`);
   };
 
   const handleViewDetails = (jobId: string) => {
-    window.location.href = `/student/jobs/${jobId}`;
+    navigate(`/jobs/${jobId}`);
   };
 
   const activeFiltersCount = Object.values(filters).filter(value => 
