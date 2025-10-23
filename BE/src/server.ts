@@ -4,6 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import path from 'path';
+import { createServer } from 'http';
 import { connectDatabase } from './config/database';
 import { config } from './config/env';
 import { logger } from './utils/logger';
@@ -11,6 +12,7 @@ import { requestLogger } from './middleware/logger.middleware';
 import { errorHandler } from './middleware/errorHandler.middleware';
 import { apiLimiter, devApiLimiter } from './middleware/rateLimiter.middleware';
 import routes from './routes';
+import SocketService from './services/socket.service';
 
 const app: Application = express();
 
@@ -102,10 +104,17 @@ const PORT = config.port;
 
 const startServer = async () => {
   try {
-    const server = app.listen(PORT, () => {
+    // Create HTTP server
+    const server = createServer(app);
+    
+    // Initialize Socket.IO
+    new SocketService(server);
+    
+    server.listen(PORT, () => {
       logger.info(`🚀 Server running on port ${PORT} in ${config.env} mode`);
       logger.info(`📡 Health check: http://localhost:${PORT}/health`);
       logger.info(`🔗 API base URL: http://localhost:${PORT}/api`);
+      logger.info(`🔌 WebSocket server initialized`);
     });
 
     // Handle server errors

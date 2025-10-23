@@ -32,6 +32,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 import { jobService } from '../../services/jobService';
+import SkillsMultiSelect from '../../components/common/SkillsMultiSelect';
 
 const PostJob: React.FC = () => {
   const { user } = useAuth();
@@ -125,8 +126,7 @@ const PostJob: React.FC = () => {
     }
   };
 
-  const handleSkillsChange = (value: string) => {
-    const skills = value.split(',').map(skill => skill.trim()).filter(skill => skill);
+  const handleSkillsChange = (skills: string[]) => {
     setJobData(prev => ({
       ...prev,
       skillsRequired: skills,
@@ -597,13 +597,12 @@ const PostJob: React.FC = () => {
         </Typography>
         <Grid container spacing={3}>
           <Grid item xs={12}>
-            <TextField
-              fullWidth
-              label="Required Skills (comma-separated)"
-              value={jobData.skillsRequired.join(', ')}
-              onChange={(e) => handleSkillsChange(e.target.value)}
-              placeholder="e.g., JavaScript, React, Node.js, MongoDB"
-              helperText="Enter skills separated by commas"
+            <SkillsMultiSelect
+              selectedSkills={jobData.skillsRequired}
+              onSkillsChange={handleSkillsChange}
+              label="Required Skills"
+              placeholder="Select skills from the dropdown..."
+              helperText="Choose one or more skills from the predefined list"
             />
           </Grid>
         </Grid>

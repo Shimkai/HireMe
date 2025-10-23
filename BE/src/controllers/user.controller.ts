@@ -6,7 +6,7 @@ import { ApiError } from '../utils/apiError';
 import User from '../models/User.model';
 import { sanitizeUser, getPaginationParams, calculatePagination } from '../utils/helpers';
 import ActivityLog from '../models/ActivityLog.model';
-import { notifyStudentVerified } from '../services/notification.service';
+import { NotificationService } from '../services/notification.service';
 
 export const getProfile = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
@@ -333,6 +333,53 @@ export const uploadLastSemesterMarksheet = asyncHandler(async (req: Request, res
   ApiSuccess.send(res, { lastSemesterMarksheet: user.studentDetails.lastSemesterMarksheet }, 'Last semester marksheet uploaded successfully');
 });
 
+export const uploadResume = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw ApiError.unauthorized('Not authenticated');
+  }
+
+  if (req.user.role !== 'Student') {
+    throw ApiError.forbidden('Only students can upload resumes');
+  }
+
+  if (!req.file) {
+    throw ApiError.badRequest('No file uploaded');
+  }
+
+  const user = await User.findById(req.user.id);
+  if (!user) {
+    throw ApiError.notFound('User not found');
+  }
+
+  if (!user.studentDetails) {
+    throw ApiError.badRequest('Student details not found');
+  }
+
+  // Add resume field to studentDetails
+  (user.studentDetails as any).resume = `/uploads/resumes/${req.file.filename}`;
+  
+  // Set student as unverified when resume is uploaded
+  user.studentDetails.isVerified = false;
+  
+  await user.save();
+
+  // Log the activity
+  await ActivityLog.create({
+    userId: user._id,
+    action: 'upload_resume',
+    details: {
+      filename: req.file.filename,
+      originalName: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+    },
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  });
+
+  ApiSuccess.send(res, { resume: (user.studentDetails as any).resume }, 'Resume uploaded successfully');
+});
+
 export const updateAvatar = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw ApiError.unauthorized('Not authenticated');
@@ -456,7 +503,15 @@ export const verifyStudent = asyncHandler(async (req: Request, res: Response) =>
 
   // Send notification
   if (isVerified) {
-    await notifyStudentVerified((student._id as any).toString());
+    // Create a general notification for student verification
+    await NotificationService.createNotification({
+      userId: (student._id as any).toString(),
+      role: 'Student',
+      title: 'Account Verified!',
+      message: 'Your account has been verified by the TnP officer. You can now apply for jobs!',
+      type: 'general',
+      priority: 'high'
+    });
   }
 
   ApiSuccess.send(res, sanitizeUser(student), `Student ${isVerified ? 'verified' : 'unverified'} successfully`);

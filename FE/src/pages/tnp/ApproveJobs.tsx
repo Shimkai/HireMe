@@ -49,6 +49,7 @@ const ApproveJobs: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('Pending');
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [jobDetailsDialogOpen, setJobDetailsDialogOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [approvalData, setApprovalData] = useState({
     approvalNotes: '',
@@ -274,7 +275,7 @@ const ApproveJobs: React.FC = () => {
                           size="small"
                           onClick={() => {
                             setSelectedJob(job);
-                            // Show job details in a dialog
+                            setJobDetailsDialogOpen(true);
                           }}
                           title="View Details"
                         >
@@ -326,120 +327,155 @@ const ApproveJobs: React.FC = () => {
       )}
 
       {/* Job Details Dialog */}
-      {selectedJob && (
-        <Dialog
-          open={!!selectedJob && !approveDialogOpen && !rejectDialogOpen}
-          onClose={() => setSelectedJob(null)}
-          maxWidth="md"
-          fullWidth
-        >
-          <DialogTitle>Job Details</DialogTitle>
-          <DialogContent>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12}>
-                <Typography variant="h6" gutterBottom>
-                  {selectedJob.title}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  {selectedJob.designation} • {selectedJob.location} • {selectedJob.jobType}
-                </Typography>
+      <Dialog
+        open={jobDetailsDialogOpen}
+        onClose={() => {
+          setJobDetailsDialogOpen(false);
+          setSelectedJob(null);
+        }}
+        maxWidth="md"
+        fullWidth
+      >
+        {selectedJob && (
+          <>
+            <DialogTitle>Job Details</DialogTitle>
+            <DialogContent>
+              <Grid container spacing={2} sx={{ mt: 1 }}>
+                <Grid item xs={12}>
+                  <Typography variant="h6" gutterBottom>
+                    {selectedJob.title}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    {selectedJob.designation} • {selectedJob.location} • {selectedJob.jobType}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Company Information
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Company:</strong> {selectedJob.companyName}
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Industry:</strong> {typeof selectedJob.postedBy === 'object' ? selectedJob.postedBy?.recruiterDetails?.industry : 'N/A'}
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Posted by:</strong> {typeof selectedJob.postedBy === 'object' ? selectedJob.postedBy?.fullName : 'N/A'}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Compensation
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>CTC Range:</strong> {formatCurrency(selectedJob.ctc.min)} - {formatCurrency(selectedJob.ctc.max)}
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Currency:</strong> {selectedJob.ctc.currency}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Job Description
+                  </Typography>
+                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                    {selectedJob.description}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Required Skills
+                  </Typography>
+                  <Box display="flex" flexWrap="wrap" gap={1}>
+                    {selectedJob.skillsRequired.map((skill, index) => (
+                      <Chip key={index} label={skill} size="small" />
+                    ))}
+                  </Box>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Eligibility Criteria
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Min CGPA:</strong> {selectedJob.eligibility.minCGPA || 'Not specified'}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Max Backlogs:</strong> {selectedJob.eligibility.maxBacklogs || 'Not specified'}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Allowed Courses:</strong> {selectedJob.eligibility.allowedCourses?.join(', ') || 'All courses'}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Experience Required:</strong> {selectedJob.experienceRequired || 'Not specified'}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Work Mode:</strong> {selectedJob.workMode || 'Not specified'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Important Dates
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Posted Date:</strong> {format(new Date(selectedJob.createdAt), 'MMM dd, yyyy')}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Application Deadline:</strong> {format(new Date(selectedJob.applicationDeadline), 'MMM dd, yyyy')}
+                  </Typography>
+                  {new Date(selectedJob.applicationDeadline) < new Date() && (
+                    <Chip
+                      label="Deadline Expired"
+                      color="error"
+                      size="small"
+                      sx={{ mt: 1 }}
+                    />
+                  )}
+                </Grid>
               </Grid>
-              <Grid item xs={12} md={6}>
-                <Card variant="outlined">
-                  <CardContent>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Company Information
-                    </Typography>
-                    <Typography variant="body2">
-                      <strong>Company:</strong> {selectedJob.companyName}
-                    </Typography>
-                    <Typography variant="body2">
-                      <strong>Industry:</strong> {typeof selectedJob.postedBy === 'object' ? selectedJob.postedBy?.recruiterDetails?.industry : 'N/A'}
-                    </Typography>
-                    <Typography variant="body2">
-                      <strong>Posted by:</strong> {typeof selectedJob.postedBy === 'object' ? selectedJob.postedBy?.fullName : 'N/A'}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Card variant="outlined">
-                  <CardContent>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Compensation
-                    </Typography>
-                    <Typography variant="body2">
-                      <strong>CTC Range:</strong> {formatCurrency(selectedJob.ctc.min)} - {formatCurrency(selectedJob.ctc.max)}
-                    </Typography>
-                    <Typography variant="body2">
-                      <strong>Currency:</strong> {selectedJob.ctc.currency}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid item xs={12}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Job Description
-                </Typography>
-                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                  {selectedJob.description}
-                </Typography>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Required Skills
-                </Typography>
-                <Box display="flex" flexWrap="wrap" gap={1}>
-                  {selectedJob.skillsRequired.map((skill, index) => (
-                    <Chip key={index} label={skill} size="small" />
-                  ))}
-                </Box>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Eligibility Criteria
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Min CGPA:</strong> {selectedJob.eligibility.minCGPA || 'Not specified'}
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Max Backlogs:</strong> {selectedJob.eligibility.maxBacklogs || 'Not specified'}
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Allowed Courses:</strong> {selectedJob.eligibility.allowedCourses?.join(', ') || 'All courses'}
-                </Typography>
-              </Grid>
-            </Grid>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setSelectedJob(null)}>
-              Close
-            </Button>
-            {selectedJob.status === 'Pending' && (
-              <>
-                <Button
-                  onClick={() => {
-                    setApproveDialogOpen(true);
-                  }}
-                  variant="contained"
-                  color="success"
-                >
-                  Approve Job
-                </Button>
-                <Button
-                  onClick={() => {
-                    setRejectDialogOpen(true);
-                  }}
-                  variant="contained"
-                  color="error"
-                >
-                  Reject Job
-                </Button>
-              </>
-            )}
-          </DialogActions>
-        </Dialog>
-      )}
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => {
+                setJobDetailsDialogOpen(false);
+                setSelectedJob(null);
+              }}>
+                Close
+              </Button>
+              {selectedJob.status === 'Pending' && (
+                <>
+                  <Button
+                    onClick={() => {
+                      setJobDetailsDialogOpen(false);
+                      setApproveDialogOpen(true);
+                    }}
+                    variant="contained"
+                    color="success"
+                  >
+                    Approve Job
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setJobDetailsDialogOpen(false);
+                      setRejectDialogOpen(true);
+                    }}
+                    variant="contained"
+                    color="error"
+                  >
+                    Reject Job
+                  </Button>
+                </>
+              )}
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
 
       {/* Approval Dialog */}
       <Dialog

@@ -3,12 +3,12 @@ import { createTheme } from '@mui/material/styles';
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#A78BFA', // Light Purple
-      dark: '#7C3AED', // Deep Purple
+      main: '#8B5CF6', // Darker Purple
+      dark: '#6D28D9', // Even Darker Purple
       contrastText: '#FFFFFF',
     },
     secondary: {
-      main: '#7C3AED',
+      main: '#6D28D9',
       contrastText: '#FFFFFF',
     },
     background: {

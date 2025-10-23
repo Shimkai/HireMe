@@ -1,20 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import {
   Menu,
-  MenuItem,
   List,
   ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
   IconButton,
   Typography,
   Box,
   Chip,
   Divider,
-  Paper,
-  Badge,
   Tooltip,
   Fade,
+  CircularProgress,
+  Alert,
+  Button,
+  LinearProgress,
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -23,9 +22,10 @@ import {
   Warning as WarningIcon,
   Info as InfoIcon,
   Notifications as NotificationsIcon,
+  Refresh as RefreshIcon,
+  MarkAsUnread as MarkAsUnreadIcon,
 } from '@mui/icons-material';
-import { Notification } from '../types/notification';
-import { notificationService } from '../services/notificationService';
+import { useNotifications } from '../hooks/useNotifications';
 import { useAuth } from '../hooks/useAuth';
 
 interface NotificationDropdownProps {
@@ -42,29 +42,75 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
   onNotificationUpdate,
 }) => {
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const {
+    notifications,
+    unreadCount,
+    loading,
+    error,
+    markAsRead,
+    markAllAsRead,
+    removeNotification,
+    loadNotifications,
+    loadUnreadCount,
+  } = useNotifications();
 
+  const [isMarkingAllAsRead, setIsMarkingAllAsRead] = useState(false);
+
+  // Load notifications when dropdown opens
   useEffect(() => {
-    if (user?.role) {
-      const userNotifications = notificationService.getNotifications(user.role);
-      setNotifications(userNotifications);
-      setUnreadCount(notificationService.getUnreadCount(userNotifications));
+    if (open) {
+      loadNotifications();
+      loadUnreadCount();
     }
-  }, [user?.role]);
+  }, [open, loadNotifications, loadUnreadCount]);
 
-  const handleMarkAsRead = (notificationId: string) => {
-    const updatedNotifications = notificationService.markAsRead(notificationId, notifications);
-    setNotifications(updatedNotifications);
-    setUnreadCount(notificationService.getUnreadCount(updatedNotifications));
-    onNotificationUpdate?.();
+  // Remove automatic mark all as read when dropdown closes
+  // Users should manually mark notifications as read
+
+  const handleMarkAsRead = async (notificationId: string) => {
+    try {
+      await markAsRead(notificationId);
+      onNotificationUpdate?.();
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
   };
 
-  const handleRemoveNotification = (notificationId: string) => {
-    const updatedNotifications = notificationService.removeNotification(notificationId, notifications);
-    setNotifications(updatedNotifications);
-    setUnreadCount(notificationService.getUnreadCount(updatedNotifications));
-    onNotificationUpdate?.();
+  const handleMarkAllAsRead = async () => {
+    if (unreadCount === 0) return;
+    
+    setIsMarkingAllAsRead(true);
+    try {
+      await markAllAsRead();
+      onNotificationUpdate?.();
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    } finally {
+      setIsMarkingAllAsRead(false);
+    }
+  };
+
+  // Handle dropdown close with auto-mark as read
+  const handleClose = () => {
+    // Mark all unread notifications as read when dropdown closes
+    if (unreadCount > 0) {
+      handleMarkAllAsRead();
+    }
+    onClose();
+  };
+
+  const handleRemoveNotification = async (notificationId: string) => {
+    try {
+      await removeNotification(notificationId);
+      onNotificationUpdate?.();
+    } catch (error) {
+      console.error('Error removing notification:', error);
+    }
+  };
+
+  const handleRefresh = () => {
+    loadNotifications();
+    loadUnreadCount();
   };
 
   const getNotificationIcon = (type: string, priority: string) => {
@@ -102,9 +148,14 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
     }
   };
 
-  const formatTimestamp = (timestamp: Date) => {
+  const formatTimestamp = (timestamp: Date | string | undefined) => {
+    if (!timestamp) return 'Unknown time';
+    
+    const date = new Date(timestamp);
+    if (isNaN(date.getTime())) return 'Invalid date';
+    
     const now = new Date();
-    const diffInMinutes = Math.floor((now.getTime() - timestamp.getTime()) / (1000 * 60));
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
     
     if (diffInMinutes < 1) return 'Just now';
     if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
@@ -129,11 +180,13 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
     }
   };
 
+  // Connection status display removed per requirements
+
   return (
     <Menu
       anchorEl={anchorEl}
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       anchorOrigin={{
         vertical: 'bottom',
         horizontal: 'right',
@@ -154,23 +207,72 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
       TransitionComponent={Fade}
     >
       <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
           <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
             {getRoleBasedTitle()}
           </Typography>
-          {unreadCount > 0 && (
-            <Chip
-              label={unreadCount}
-              size="small"
-              color="error"
-              sx={{ fontWeight: 600 }}
-            />
-          )}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {unreadCount > 0 && (
+              <Chip
+                label={unreadCount}
+                size="small"
+                color="error"
+                sx={{ fontWeight: 600 }}
+              />
+            )}
+            <Tooltip title="Refresh notifications">
+              <span>
+                <IconButton size="small" onClick={handleRefresh} disabled={loading}>
+                  <RefreshIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </Box>
         </Box>
+        
+        {/* Connection status indicators removed per requirements */}
+
+        {/* Mark All as Read Button */}
+        {unreadCount > 0 && (
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Button
+              size="small"
+              startIcon={isMarkingAllAsRead ? <CircularProgress size={16} /> : <MarkAsUnreadIcon />}
+              onClick={handleMarkAllAsRead}
+              disabled={isMarkingAllAsRead}
+              sx={{ fontSize: '0.75rem' }}
+            >
+              Mark all as read
+            </Button>
+          </Box>
+        )}
       </Box>
 
+      {/* Loading State */}
+      {loading && (
+        <Box sx={{ p: 2 }}>
+          <LinearProgress />
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+            Loading notifications...
+          </Typography>
+        </Box>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <Box sx={{ p: 2 }}>
+          <Alert severity="error" sx={{ mb: 1 }}>
+            {error}
+          </Alert>
+          <Button size="small" onClick={handleRefresh} startIcon={<RefreshIcon />}>
+            Retry
+          </Button>
+        </Box>
+      )}
+
+      {/* Notifications List */}
       <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
-        {notifications.length === 0 ? (
+        {!loading && !error && notifications.length === 0 ? (
           <Box sx={{ p: 3, textAlign: 'center' }}>
             <NotificationsIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
             <Typography variant="body2" color="text.secondary">
@@ -180,13 +282,14 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
         ) : (
           <List sx={{ p: 0 }}>
             {notifications.map((notification, index) => (
-              <React.Fragment key={notification.id}>
+              <React.Fragment key={notification.id || notification._id}>
                 <ListItem
                   sx={{
                     py: 2,
                     px: 2,
                     backgroundColor: notification.isRead ? 'transparent' : 'action.hover',
-                    borderLeft: notification.isRead ? 'none' : `4px solid ${getPriorityColor(notification.priority)}`,
+                    borderLeft: notification.isRead ? '4px solid #ffc107' : '4px solid #f44336', // Yellow for read, red for unread
+                    transition: 'all 0.2s ease-in-out',
                     '&:hover': {
                       backgroundColor: 'action.selected',
                     },
@@ -240,31 +343,37 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
                           fontSize: '0.75rem',
                         }}
                       >
-                        {formatTimestamp(notification.timestamp)}
+                        {formatTimestamp((notification as any).createdAt || (notification as any).timestamp || '')}
                       </Typography>
                     </Box>
                     
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                       {!notification.isRead && (
                         <Tooltip title="Mark as read">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleMarkAsRead(notification.id)}
-                            sx={{ mb: 1 }}
-                          >
-                            <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main' }} />
-                          </IconButton>
+                          <span>
+                            <IconButton
+                              size="small"
+                            onClick={() => handleMarkAsRead((notification as any).id || (notification as any)._id || '')}
+                              sx={{ mb: 1 }}
+                              disabled={false}
+                            >
+                              <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main' }} />
+                            </IconButton>
+                          </span>
                         </Tooltip>
                       )}
                       
                       <Tooltip title="Remove notification">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleRemoveNotification(notification.id)}
-                          sx={{ color: 'text.secondary' }}
-                        >
-                          <CloseIcon sx={{ fontSize: 16 }} />
-                        </IconButton>
+                        <span>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleRemoveNotification((notification as any).id || (notification as any)._id || '')}
+                            sx={{ color: 'text.secondary' }}
+                            disabled={false}
+                          >
+                            <CloseIcon sx={{ fontSize: 16 }} />
+                          </IconButton>
+                        </span>
                       </Tooltip>
                     </Box>
                   </Box>
@@ -280,6 +389,7 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
         <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider', textAlign: 'center' }}>
           <Typography variant="caption" color="text.secondary">
             {notifications.length} notification{notifications.length !== 1 ? 's' : ''}
+            {unreadCount > 0 && ` • ${unreadCount} unread`}
           </Typography>
         </Box>
       )}

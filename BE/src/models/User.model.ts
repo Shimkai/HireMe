@@ -181,6 +181,9 @@ const userSchema = new Schema<IUser>(
       lastSemesterMarksheet: {
         type: String, // File path
       },
+      resume: {
+        type: String, // File path
+      },
       areaOfInterest: [{
         type: String,
         enum: [

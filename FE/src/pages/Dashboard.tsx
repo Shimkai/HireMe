@@ -1,5 +1,5 @@
 import { useAuth } from '../hooks/useAuth';
-import StudentDashboard from './student/Dashboard';
+import StudentDashboard from './student/Dashboard'; // Back to full version
 import RecruiterDashboard from './recruiter/Dashboard';
 import TnPDashboard from './tnp/Dashboard';
 import { Box, Typography, Button } from '@mui/material';
@@ -8,6 +8,11 @@ import { useNavigate } from 'react-router-dom';
 const Dashboard = () => {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  // Debug logging
+  console.log('Dashboard - isAuthenticated:', isAuthenticated);
+  console.log('Dashboard - user:', user);
+  console.log('Dashboard - user role:', user?.role);
 
   // Handle case where user is not authenticated
   if (!isAuthenticated || !user) {

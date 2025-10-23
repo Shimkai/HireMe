@@ -29,7 +29,6 @@ const Sidebar: React.FC<SidebarProps> = ({ open }) => {
     { text: 'My Profile', icon: <Person />, path: '/profile' },
     { text: 'Browse Jobs', icon: <Work />, path: '/jobs' },
     { text: 'My Applications', icon: <Assignment />, path: '/applications' },
-    { text: 'Resume', icon: <Description />, path: '/resume' },
   ];
 
   const recruiterMenuItems = [

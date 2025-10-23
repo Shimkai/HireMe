@@ -8,7 +8,7 @@ import Job from '../models/Job.model';
 import User from '../models/User.model';
 import { getPaginationParams, calculatePagination } from '../utils/helpers';
 import ActivityLog from '../models/ActivityLog.model';
-import { notifyNewApplication, notifyApplicationStatusUpdate } from '../services/notification.service';
+import { NotificationService } from '../services/notification.service';
 
 export const applyToJob = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user || req.user.role !== 'Student') {
@@ -85,11 +85,10 @@ export const applyToJob = asyncHandler(async (req: Request, res: Response) => {
   });
 
   // Notify recruiter
-  await notifyNewApplication(
-    job.postedBy.toString(),
-    student.fullName,
-    job.title,
-    (application._id as any).toString()
+  await NotificationService.notifyJobApplication(
+    (application._id as any).toString(),
+    jobId,
+    (student._id as any).toString()
   );
 
   ApiSuccess.send(res, application, 'Application submitted successfully', 201);
@@ -221,12 +220,17 @@ export const updateApplicationStatus = asyncHandler(async (req: Request, res: Re
 
   // Notify student
   const student = application.studentId as any;
-  await notifyApplicationStatusUpdate(
-    student._id.toString(),
-    job.title,
+  await NotificationService.notifyApplicationStatusChange(
+    (application._id as any).toString(),
+    (student._id as any).toString(),
     status,
-    (application._id as any).toString()
+    job.title
   );
+
+  // If placed, notify TnP
+  if (status === 'Placed') {
+    await NotificationService.notifyStudentPlaced((student._id as any).toString());
+  }
 
   ApiSuccess.send(res, application, 'Application status updated successfully');
 });

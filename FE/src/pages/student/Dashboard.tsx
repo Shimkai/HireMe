@@ -12,6 +12,10 @@ const StudentDashboard = () => {
   const [showVerificationPopup, setShowVerificationPopup] = useState(false);
   const [countdown, setCountdown] = useState(30);
 
+  // Debug logging
+  console.log('StudentDashboard - user:', user);
+  console.log('StudentDashboard - user role:', user?.role);
+
   // Show verification popup if student is not verified
   useEffect(() => {
     if (user?.role === 'Student' && !user?.studentDetails?.isVerified) {
@@ -33,7 +37,7 @@ const StudentDashboard = () => {
   }, [showVerificationPopup, countdown]);
 
   const stats = [
-    { title: 'Applications Sent', value: '0', icon: <Assignment fontSize="large" />, color: '#A78BFA' },
+    { title: 'Applications Sent', value: '0', icon: <Assignment fontSize="large" />, color: '#8B5CF6' },
     { title: 'Interviews Scheduled', value: '0', icon: <Event fontSize="large" />, color: '#10B981' },
     { title: 'Shortlisted', value: '0', icon: <CheckCircle fontSize="large" />, color: '#F59E0B' },
     { title: 'Job Alerts', value: '0', icon: <Work fontSize="large" />, color: '#EF4444' },

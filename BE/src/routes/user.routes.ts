@@ -14,6 +14,7 @@ router.put('/me/avatar', authenticate, upload.single('avatar'), userController.u
 router.post('/upload-tenth-marksheet', authenticate, upload.single('marksheet'), userController.uploadTenthMarksheet);
 router.post('/upload-twelfth-marksheet', authenticate, upload.single('marksheet'), userController.uploadTwelfthMarksheet);
 router.post('/upload-last-semester-marksheet', authenticate, upload.single('marksheet'), userController.uploadLastSemesterMarksheet);
+router.post('/upload-resume', authenticate, upload.single('resume'), userController.uploadResume);
 
 // TnP routes
 router.get('/students', authenticate, authorizeRoles('TnP'), userController.getStudents);

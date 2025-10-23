@@ -30,20 +30,8 @@ const Login = () => {
     try {
       const data = await authService.login(email, password);
       dispatch(setCredentials(data));
-      // Redirect based on user role
-      switch (data.user.role) {
-        case 'Student':
-          navigate('/student/dashboard');
-          break;
-        case 'Recruiter':
-          navigate('/recruiter/dashboard');
-          break;
-        case 'TnP':
-          navigate('/tnp/dashboard');
-          break;
-        default:
-          navigate('/dashboard');
-      }
+      // Redirect to dashboard (role-based routing handled in Dashboard component)
+      navigate('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'Login failed');
     } finally {

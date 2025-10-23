@@ -5,17 +5,19 @@ import {
   Typography,
   IconButton,
   Badge,
-  Avatar,
   Box,
   Menu,
   MenuItem,
   Chip,
+  Tooltip,
 } from '@mui/material';
-import { Notifications as NotificationsIcon, Menu as MenuIcon, Settings as SettingsIcon } from '@mui/icons-material';
+import { Notifications as NotificationsIcon, Menu as MenuIcon, Settings as SettingsIcon, Warning as WarningIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { useNotifications } from '../../hooks/useNotifications';
 import NotificationDropdown from '../NotificationDropdown';
-import { notificationService } from '../../services/notificationService';
+import ProfileAvatar from '../common/ProfileAvatar';
+import ErrorBoundary from '../common/ErrorBoundary';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -24,17 +26,14 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { unreadCount, isConnected, connectionStatus } = useNotifications();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [notificationAnchorEl, setNotificationAnchorEl] = useState<null | HTMLElement>(null);
-  const [unreadCount, setUnreadCount] = useState(0);
 
+  // Debug: Monitor unread count changes
   useEffect(() => {
-    if (user?.role) {
-      const notifications = notificationService.getNotifications(user.role);
-      const count = notificationService.getUnreadCount(notifications);
-      setUnreadCount(count);
-    }
-  }, [user?.role]);
+    console.log('Header: Unread count changed:', unreadCount);
+  }, [unreadCount]);
 
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -69,11 +68,8 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   };
 
   const handleNotificationUpdate = () => {
-    if (user?.role) {
-      const notifications = notificationService.getNotifications(user.role);
-      const count = notificationService.getUnreadCount(notifications);
-      setUnreadCount(count);
-    }
+    // The notification count is now managed by the useNotifications hook
+    // No need to manually update it here
   };
 
   return (
@@ -89,31 +85,62 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
 
         <Box sx={{ flexGrow: 1 }} />
 
-        <IconButton 
-          color="inherit" 
-          sx={{ mr: 2 }}
-          onClick={handleNotificationClick}
-        >
-          <Badge badgeContent={unreadCount} color="error">
-            <NotificationsIcon />
-          </Badge>
-        </IconButton>
+        <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
+          <Tooltip title={'Notifications'}>
+            <IconButton 
+              color="inherit" 
+              onClick={handleNotificationClick}
+            >
+              <Badge 
+                badgeContent={unreadCount || 0} 
+                color="error"
+                sx={{
+                  '& .MuiBadge-badge': {
+                    animation: (unreadCount || 0) > 0 ? 'pulse 2s infinite' : 'none',
+                    backgroundColor: '#f44336',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    fontSize: '0.55rem',
+                    minWidth: '12px',
+                    height: '12px',
+                    borderRadius: '6px',
+                    top: '-2px',
+                    right: '-2px',
+                    transform: 'scale(1)',
+                    padding: '0',
+                    lineHeight: '12px',
+                    border: '1px solid white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  },
+                  '@keyframes pulse': {
+                    '0%': { transform: 'scale(1)' },
+                    '50%': { transform: 'scale(1.1)' },
+                    '100%': { transform: 'scale(1)' },
+                  },
+                }}
+              >
+                <NotificationsIcon />
+              </Badge>
+            </IconButton>
+          </Tooltip>
+          {/* Connection status icon removed per requirements */}
+        </Box>
 
         <Chip label={user?.role} color="secondary" size="small" sx={{ mr: 2 }} />
 
         <IconButton onClick={handleMenu} sx={{ p: 0 }}>
-          <Avatar 
-            key={user?.profileAvatar || 'default'}
-            alt={user?.fullName} 
-            src={user?.profileAvatar ? `http://localhost:5000${user.profileAvatar}` : undefined}
+          <ProfileAvatar
+            key={`avatar-${user?.profileAvatar || 'default'}-${user?._id}`}
+            user={user}
+            alt={user?.fullName}
             sx={{ 
               bgcolor: 'secondary.main',
               width: 40,
               height: 40,
             }}
-          >
-            {user?.fullName?.charAt(0)}
-          </Avatar>
+          />
         </IconButton>
 
         <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleClose}>
@@ -128,12 +155,22 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           <MenuItem onClick={handleLogout}>Logout</MenuItem>
         </Menu>
 
-        <NotificationDropdown
-          anchorEl={notificationAnchorEl}
-          open={Boolean(notificationAnchorEl)}
-          onClose={handleNotificationClose}
-          onNotificationUpdate={handleNotificationUpdate}
-        />
+        <ErrorBoundary
+          fallback={
+            <Box sx={{ p: 1, textAlign: 'center' }}>
+              <Typography variant="caption" color="error">
+                Notifications unavailable
+              </Typography>
+            </Box>
+          }
+        >
+          <NotificationDropdown
+            anchorEl={notificationAnchorEl}
+            open={Boolean(notificationAnchorEl)}
+            onClose={handleNotificationClose}
+            onNotificationUpdate={handleNotificationUpdate}
+          />
+        </ErrorBoundary>
       </Toolbar>
     </AppBar>
   );

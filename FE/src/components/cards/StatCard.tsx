@@ -29,8 +29,8 @@ const StatCard: React.FC<StatCardProps> = ({
 }) => {
   const getColorValue = (colorName: string) => {
     const colors = {
-      primary: '#A78BFA',
-      secondary: '#7C3AED',
+      primary: '#8B5CF6',
+      secondary: '#6D28D9',
       success: '#10B981',
       warning: '#F59E0B',
       error: '#EF4444',

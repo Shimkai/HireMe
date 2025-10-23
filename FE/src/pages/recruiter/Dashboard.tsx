@@ -7,7 +7,7 @@ const RecruiterDashboard = () => {
   const navigate = useNavigate();
 
   const stats = [
-    { title: 'Active Jobs', value: '0', icon: <Work fontSize="large" />, color: '#A78BFA' },
+    { title: 'Active Jobs', value: '0', icon: <Work fontSize="large" />, color: '#8B5CF6' },
     { title: 'Total Applications', value: '0', icon: <People fontSize="large" />, color: '#10B981' },
     { title: 'Interviews Scheduled', value: '0', icon: <CheckCircle fontSize="large" />, color: '#F59E0B' },
     { title: 'Hired Candidates', value: '0', icon: <Analytics fontSize="large" />, color: '#EF4444' },

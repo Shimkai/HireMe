@@ -88,6 +88,10 @@ const ProfilePage = () => {
       originalName: 'Last Semester Marksheet',
       path: user.studentDetails.lastSemesterMarksheet
     } : null,
+    resume: user?.studentDetails?.resume ? {
+      originalName: 'Resume',
+      path: user.studentDetails.resume
+    } : null,
     // Recruiter specific
     companyName: user?.recruiterDetails?.companyName || '',
     industry: user?.recruiterDetails?.industry || '',
@@ -177,6 +181,10 @@ const ProfilePage = () => {
           originalName: 'Last Semester Marksheet',
           path: user.studentDetails.lastSemesterMarksheet
         } : null,
+        resume: user.studentDetails?.resume ? {
+          originalName: 'Resume',
+          path: user.studentDetails.resume
+        } : null,
         // Recruiter specific
         companyName: user.recruiterDetails?.companyName || '',
         industry: user.recruiterDetails?.industry || '',
@@ -247,6 +255,13 @@ const ProfilePage = () => {
             console.log('ProfilePage: Updating user with new profileAvatar:', response.data.data.profileAvatar);
             console.log('ProfilePage: Updated user object:', updatedUser);
             updateUser(updatedUser);
+            
+            // Force a small delay to ensure the state update propagates
+            setTimeout(() => {
+              console.log('ProfilePage: User state should now be updated');
+              // Force a re-render by updating a dummy state if needed
+              setFormData(prev => ({ ...prev }));
+            }, 100);
           }
 
           setSuccess('Profile photo uploaded successfully!');
@@ -266,7 +281,7 @@ const ProfilePage = () => {
     }
   };
 
-  const handleFileUpload = async (file: File, type: 'tenthMarksheet' | 'twelfthMarksheet' | 'lastSemMarksheet') => {
+  const handleFileUpload = async (file: File, type: 'tenthMarksheet' | 'twelfthMarksheet' | 'lastSemMarksheet' | 'resume') => {
     setUploadingFiles(prev => ({ ...prev, [type]: true }));
     setUploadProgress(prev => ({ ...prev, [type]: 0 }));
 
@@ -276,21 +291,41 @@ const ProfilePage = () => {
       formData.append('type', type);
 
       // Simulate file upload with progress
-      const uploadPromise = new Promise((resolve) => {
+      const uploadPromise = new Promise<{path: string, originalName: string}>((resolve, reject) => {
         let progress = 0;
         const interval = setInterval(() => {
           progress += 10;
           setUploadProgress(prev => ({ ...prev, [type]: progress }));
           if (progress >= 100) {
             clearInterval(interval);
-            resolve({
-              filename: `${type}_${Date.now()}.pdf`,
-              originalName: file.name,
-              path: `/uploads/${type}_${Date.now()}.pdf`,
-              uploadedAt: new Date().toISOString(),
-            });
           }
         }, 200);
+
+        // Make actual API call
+        const endpoint = type === 'resume' ? '/users/upload-resume' : `/users/upload-${type}`;
+        const fieldName = type === 'resume' ? 'resume' : 'marksheet';
+        
+        const uploadFormData = new FormData();
+        uploadFormData.append(fieldName, file);
+        
+        api.post(endpoint, uploadFormData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }).then((response) => {
+          clearInterval(interval);
+          setUploadProgress(prev => ({ ...prev, [type]: 100 }));
+          
+          const filePath = response.data.data[type] || response.data.data.resume;
+          resolve({
+            path: filePath,
+            originalName: file.name
+          });
+        }).catch((error) => {
+          clearInterval(interval);
+          setError(error.response?.data?.message || `Failed to upload ${type}`);
+          reject(error);
+        });
       });
 
       const result = await uploadPromise;
@@ -301,7 +336,7 @@ const ProfilePage = () => {
         [type]: result,
       }));
 
-      setSuccess(`${type.replace(/([A-Z])/g, ' $1').toLowerCase()} uploaded successfully!`);
+      setSuccess(`${type === 'resume' ? 'Resume' : type.replace(/([A-Z])/g, ' $1').toLowerCase()} uploaded successfully!`);
     } catch (error) {
       setError(`Failed to upload ${type.replace(/([A-Z])/g, ' $1').toLowerCase()}`);
     } finally {
@@ -391,6 +426,10 @@ const ProfilePage = () => {
       lastSemMarksheet: user?.studentDetails?.lastSemesterMarksheet ? {
         originalName: 'Last Semester Marksheet',
         path: user.studentDetails.lastSemesterMarksheet
+      } : null,
+      resume: user?.studentDetails?.resume ? {
+        originalName: 'Resume',
+        path: user.studentDetails.resume
       } : null,
       companyName: user?.recruiterDetails?.companyName || '',
       industry: user?.recruiterDetails?.industry || '',
@@ -491,6 +530,10 @@ const ProfilePage = () => {
           // Backend expects lastSemesterMarksheet as a string path
           ...((formData as any).lastSemMarksheet?.path ? {
             lastSemesterMarksheet: (formData as any).lastSemMarksheet.path
+          } : {}),
+          // Backend expects resume as a string path
+          ...((formData as any).resume?.path ? {
+            resume: (formData as any).resume.path
           } : {}),
           // Include projects if they exist
           ...(formData.projects && formData.projects.length > 0 ? {
@@ -1169,6 +1212,72 @@ const ProfilePage = () => {
                               <LinearProgress 
                                 variant="determinate" 
                                 value={uploadProgress.lastSemMarksheet} 
+                                sx={{ mt: 1 }}
+                              />
+                            )}
+                          </Box>
+                        )}
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </Paper>
+              </Grid>
+
+              {/* Resume Upload Section */}
+              <Grid item xs={12}>
+                <Paper sx={{ p: 3 }}>
+                  <Typography variant="h6" gutterBottom>
+                    Resume
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} md={6}>
+                      <Box>
+                        <Typography variant="body2" color="text.secondary" gutterBottom>
+                          Upload your resume (PDF, DOC, DOCX)
+                        </Typography>
+                        {(formData as any).resume ? (
+                          <Box>
+                            <Typography variant="body2" sx={{ mb: 1 }}>
+                              <AttachFile sx={{ fontSize: 16, mr: 1, verticalAlign: 'middle' }} />
+                              {(formData as any).resume.originalName}
+                            </Typography>
+                            <br />
+                            <Button
+                              size="small"
+                              startIcon={<Download />}
+                              disabled={!isEditing}
+                            >
+                              Download
+                            </Button>
+                          </Box>
+                        ) : (
+                          <Box>
+                            <input
+                              accept=".pdf,.doc,.docx"
+                              style={{ display: 'none' }}
+                              id="resume"
+                              type="file"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleFileUpload(file, 'resume');
+                              }}
+                              disabled={!isEditing}
+                            />
+                            <label htmlFor="resume">
+                              <Button
+                                variant="outlined"
+                                component="span"
+                                startIcon={<Upload />}
+                                disabled={!isEditing || uploadingFiles.resume}
+                                fullWidth
+                              >
+                                Upload Resume
+                              </Button>
+                            </label>
+                            {uploadingFiles.resume && (
+                              <LinearProgress 
+                                variant="determinate" 
+                                value={uploadProgress.resume} 
                                 sx={{ mt: 1 }}
                               />
                             )}

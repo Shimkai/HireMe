@@ -7,7 +7,7 @@ import Job from '../models/Job.model';
 import Application from '../models/Application.model';
 import { getPaginationParams, calculatePagination } from '../utils/helpers';
 import ActivityLog from '../models/ActivityLog.model';
-import { notifyJobApproved, notifyJobRejected } from '../services/notification.service';
+import { NotificationService } from '../services/notification.service';
 
 export const createJob = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user || req.user.role !== 'Recruiter') {
@@ -30,6 +30,9 @@ export const createJob = asyncHandler(async (req: Request, res: Response) => {
     ipAddress: req.ip,
     userAgent: req.get('user-agent'),
   });
+
+  // Notify TnP for approval
+  await NotificationService.notifyJobPosted((job._id as any).toString(), (req.user.id as any).toString());
 
   ApiSuccess.send(res, job, 'Job created successfully. Pending approval.', 201);
 });
@@ -214,7 +217,7 @@ export const approveJob = asyncHandler(async (req: Request, res: Response) => {
   });
 
   // Notify recruiter
-  await notifyJobApproved((job.postedBy as any)._id.toString(), job.title, (job._id as any).toString());
+  await NotificationService.notifyJobApproved((job._id as any).toString(), (req.user.id as any).toString());
 
   ApiSuccess.send(res, job, 'Job approved successfully');
 });
@@ -250,11 +253,10 @@ export const rejectJob = asyncHandler(async (req: Request, res: Response) => {
   });
 
   // Notify recruiter
-  await notifyJobRejected(
+  await NotificationService.notifyJobRejected(
+    (job._id as any).toString(),
     (job.postedBy as any)._id.toString(),
-    job.title,
-    req.body.rejectionReason,
-    (job._id as any).toString()
+    req.body.rejectionReason
   );
 
   ApiSuccess.send(res, job, 'Job rejected');

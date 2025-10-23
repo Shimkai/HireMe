@@ -49,12 +49,12 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     palette: {
       mode,
       primary: {
-        main: '#A78BFA', // Light Purple
-        dark: '#7C3AED', // Deep Purple
+        main: '#8B5CF6', // Darker Purple
+        dark: '#6D28D9', // Even Darker Purple
         contrastText: '#FFFFFF',
       },
       secondary: {
-        main: '#7C3AED',
+        main: '#6D28D9',
         contrastText: '#FFFFFF',
       },
       background: {
@@ -140,7 +140,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       MuiAppBar: {
         styleOverrides: {
           root: {
-            backgroundColor: mode === 'light' ? '#A78BFA' : '#1E1E1E',
+            backgroundColor: mode === 'light' ? '#8B5CF6' : '#1E1E1E',
           },
         },
       },

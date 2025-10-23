@@ -52,6 +52,14 @@ export const applicationService = {
     };
   },
 
+  getRecruiterApplications: async (params?: any): Promise<{ data: Application[]; pagination: any }> => {
+    const response = await api.get<ApplicationsResponse>('/applications/recruiter-applications', { params });
+    return {
+      data: response.data.data,
+      pagination: response.data.pagination,
+    };
+  },
+
   updateApplicationStatus: async (
     applicationId: string, 
     status: string, 

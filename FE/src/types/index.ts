@@ -33,6 +33,7 @@ export interface StudentDetails {
     marksheet?: string;
   };
   lastSemesterMarksheet?: string;
+  resume?: string;
   projects?: Array<{
     title: string;
     description: string;

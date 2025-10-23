@@ -14,6 +14,7 @@
     "seed:test": "ts-node src/seeders/testData.seeder.ts",
     "seed:report": "ts-node src/seeders/reportData.seeder.ts",
     "seed:recommendations": "ts-node src/seeders/recommendationData.seeder.ts",
+    "seed:notifications": "ts-node src/seeders/notification.seeder.ts",
     "migrate:rename-college": "ts-node src/seeders/renameCollege.ts",
     "clean:user-data": "ts-node src/seeders/cleanUserData.ts"
   },

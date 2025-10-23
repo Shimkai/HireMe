@@ -4,6 +4,7 @@ import MainLayout from '../../components/layout/MainLayout';
 import { useState } from 'react';
 import { jobService } from '../../services/jobService';
 import { useAuth } from '../../hooks/useAuth';
+import SkillsMultiSelect from '../../components/common/SkillsMultiSelect';
 
 const PostJobPage = () => {
   const { user } = useAuth();
@@ -43,20 +44,10 @@ const PostJobPage = () => {
     }));
   };
 
-  const addSkill = () => {
-    if (newSkill.trim() && !formData.skillsRequired.includes(newSkill.trim())) {
-      setFormData(prev => ({
-        ...prev,
-        skillsRequired: [...prev.skillsRequired, newSkill.trim()]
-      }));
-      setNewSkill('');
-    }
-  };
-
-  const removeSkill = (skillToRemove: string) => {
+  const handleSkillsChange = (skills: string[]) => {
     setFormData(prev => ({
       ...prev,
-      skillsRequired: prev.skillsRequired.filter(skill => skill !== skillToRemove)
+      skillsRequired: skills
     }));
   };
 
@@ -367,29 +358,13 @@ const PostJobPage = () => {
                   <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
                     Required Skills
                   </Typography>
-                  <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                    <TextField
-                      label="Add Skill"
-                      value={newSkill}
-                      onChange={(e) => setNewSkill(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
-                      size="small"
-                    />
-                    <Button variant="outlined" onClick={addSkill} startIcon={<Add />}>
-                      Add
-                    </Button>
-                  </Box>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                    {formData.skillsRequired.map((skill, index) => (
-                      <Chip
-                        key={index}
-                        label={skill}
-                        onDelete={() => removeSkill(skill)}
-                        color="primary"
-                        variant="outlined"
-                      />
-                    ))}
-                  </Box>
+                  <SkillsMultiSelect
+                    selectedSkills={formData.skillsRequired}
+                    onSkillsChange={handleSkillsChange}
+                    label="Required Skills"
+                    placeholder="Select skills from the dropdown..."
+                    helperText="Choose one or more skills from the predefined list"
+                  />
                 </Grid>
 
                 <Grid item xs={12}>
