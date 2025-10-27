@@ -80,4 +80,12 @@ export const applicationService = {
   withdrawApplication: async (applicationId: string): Promise<void> => {
     await api.delete(`/applications/${applicationId}`);
   },
+
+  sendTestLink: async (jobId: string, testLink: string, target: 'all' | 'shortlisted'): Promise<any> => {
+    const response = await api.post(`/applications/job/${jobId}/send-test-link`, {
+      testLink,
+      target,
+    });
+    return response.data.data;
+  },
 };

@@ -5,6 +5,7 @@ import { ApiSuccess } from '../utils/apiResponse';
 import { ApiError } from '../utils/apiError';
 import Job from '../models/Job.model';
 import Application from '../models/Application.model';
+import User from '../models/User.model';
 import { getPaginationParams, calculatePagination } from '../utils/helpers';
 import ActivityLog from '../models/ActivityLog.model';
 import { NotificationService } from '../services/notification.service';
@@ -14,8 +15,9 @@ export const createJob = asyncHandler(async (req: Request, res: Response) => {
     throw ApiError.forbidden('Only recruiters can create jobs');
   }
 
-  // Auto-populate company name from recruiter profile
-  const companyName = req.user.recruiterDetails?.companyName || req.body.companyName;
+  // Fetch full user to get recruiter details
+  const user = await User.findById(req.user.id);
+  const companyName = (user?.recruiterDetails as any)?.companyName || req.body.companyName;
 
   // Handle empty strings for numeric fields by converting to undefined
   const processNumericField = (value: any): number | undefined => {

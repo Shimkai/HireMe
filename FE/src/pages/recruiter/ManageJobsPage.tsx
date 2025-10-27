@@ -1,5 +1,5 @@
 import { Container, Grid, Card, CardContent, Typography, Button, Box, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Alert, CircularProgress, TextField, FormControl, InputLabel, Select, MenuItem, Avatar, List, ListItem, ListItemText, ListItemAvatar, Divider, Collapse } from '@mui/material';
-import { Edit, Delete, Visibility, Work, LocationOn, Business, Psychology, ExpandMore, ExpandLess } from '@mui/icons-material';
+import { Edit, Delete, Visibility, Work, LocationOn, Business, Psychology, ExpandMore, ExpandLess, Assignment } from '@mui/icons-material';
 import MainLayout from '../../components/layout/MainLayout';
 import { useState, useEffect } from 'react';
 import { jobService } from '../../services/jobService';
@@ -9,6 +9,7 @@ import { useAuth } from '../../hooks/useAuth';
 import RecommendedStudents from '../../components/recruiter/RecommendedStudents';
 import StudentDetailsModal from '../../components/common/StudentDetailsModal';
 import SkillsMultiSelect from '../../components/common/SkillsMultiSelect';
+import TestLinkDialog from '../../components/recruiter/TestLinkDialog';
 
 const ManageJobsPage = () => {
   const { user } = useAuth();
@@ -23,6 +24,10 @@ const ManageJobsPage = () => {
   const [showError, setShowError] = useState(false);
   const [recommendationsDialog, setRecommendationsDialog] = useState(false);
   const [selectedJobForRecommendations, setSelectedJobForRecommendations] = useState<string | null>(null);
+  
+  // Test link dialog
+  const [testLinkDialogOpen, setTestLinkDialogOpen] = useState(false);
+  const [selectedJobForTestLink, setSelectedJobForTestLink] = useState<Job | null>(null);
   
   // Applications and student details modal
   const [applications, setApplications] = useState<{ [jobId: string]: Application[] }>({});
@@ -204,6 +209,28 @@ const ManageJobsPage = () => {
   const handleCloseRecommendations = () => {
     setRecommendationsDialog(false);
     setSelectedJobForRecommendations(null);
+  };
+
+  const handleOpenTestLinkDialog = (job: Job) => {
+    setSelectedJobForTestLink(job);
+    setTestLinkDialogOpen(true);
+  };
+
+  const handleCloseTestLinkDialog = () => {
+    setTestLinkDialogOpen(false);
+    setSelectedJobForTestLink(null);
+  };
+
+  const handleSendTestLink = async (testLink: string, target: 'all' | 'shortlisted') => {
+    if (!selectedJobForTestLink) return;
+
+    try {
+      await applicationService.sendTestLink(selectedJobForTestLink._id, testLink, target);
+      // Refresh jobs to update application counts
+      await fetchMyJobs();
+    } catch (err: any) {
+      throw err;
+    }
   };
 
   const handleSkillsChange = (skills: string[]) => {
@@ -390,6 +417,16 @@ const ManageJobsPage = () => {
                             )}
                           </Box>
                           <Box>
+                            {job.status === 'Approved' && job.applicationCount > 0 && (
+                              <IconButton 
+                                size="small" 
+                                color="info"
+                                onClick={() => handleOpenTestLinkDialog(job)}
+                                title="Send Test Link to Applicants"
+                              >
+                                <Assignment />
+                              </IconButton>
+                            )}
                             <IconButton 
                               size="small" 
                               color="secondary"
@@ -741,6 +778,20 @@ const ManageJobsPage = () => {
             companyName: selectedJob?.companyName
           } : undefined}
         />
+
+        {/* Test Link Dialog */}
+        {selectedJobForTestLink && (
+          <TestLinkDialog
+            open={testLinkDialogOpen}
+            onClose={handleCloseTestLinkDialog}
+            jobId={selectedJobForTestLink._id}
+            jobTitle={selectedJobForTestLink.title}
+            companyName={selectedJobForTestLink.companyName}
+            applicationCount={selectedJobForTestLink.applicationCount}
+            shortlistedCount={applications[selectedJobForTestLink._id]?.filter(app => app.status === 'Shortlisted').length || 0}
+            onSend={handleSendTestLink}
+          />
+        )}
       </Container>
     </MainLayout>
   );

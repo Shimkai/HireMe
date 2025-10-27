@@ -20,5 +20,8 @@ router.get('/recruiter', authenticate, authorizeRoles('Recruiter'), applicationC
 router.get('/all', authenticate, authorizeRoles('TnP'), applicationController.getAllApplications);
 router.put('/:applicationId/status', authenticate, authorizeRoles('Recruiter'), validate(updateApplicationStatusSchema), applicationController.updateApplicationStatus);
 
+// Test link route
+router.post('/job/:jobId/send-test-link', authenticate, authorizeRoles('Recruiter', 'TnP'), applicationController.sendTestLink);
+
 export default router;
 

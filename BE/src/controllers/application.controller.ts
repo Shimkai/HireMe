@@ -396,3 +396,79 @@ export const getAllApplications = asyncHandler(async (req: Request, res: Respons
   return ApiSuccess.sendWithPagination(res, applications, calculatePagination(skip, pageLimit, total), 'All applications retrieved successfully');
 });
 
+/**
+ * Send test link to job applicants
+ */
+export const sendTestLink = asyncHandler(async (req: Request, res: Response) => {
+  const { jobId } = req.params;
+  const { testLink, target } = req.body;
+
+  if (!testLink || !target) {
+    throw ApiError.badRequest('Test link and target are required');
+  }
+
+  // Find the job
+  const job = await Job.findById(jobId);
+  if (!job) {
+    throw ApiError.notFound('Job not found');
+  }
+
+  // Check if user is the job owner
+  if (req.user?.role === 'Recruiter' && job.postedBy.toString() !== req.user.id) {
+    throw ApiError.forbidden('You can only send test links for your own jobs');
+  }
+
+  // Build query based on target
+  const applicationQuery: any = { jobId };
+  if (target === 'shortlisted') {
+    applicationQuery.status = 'Shortlisted';
+  }
+
+  // Get applications
+  const applications = await Application.find(applicationQuery).select('studentId');
+  
+  if (applications.length === 0) {
+    throw ApiError.badRequest(`No ${target === 'shortlisted' ? 'shortlisted' : ''} applicants found for this job`);
+  }
+
+  // Get student IDs
+  const studentIds = applications.map(app => (app.studentId as any).toString());
+
+  // Get recruiter info for notification
+  const recruiter = await User.findById(job.postedBy);
+  const companyName = recruiter?.recruiterDetails?.companyName || job.companyName;
+
+  // Create notifications
+  const title = `Test Link from ${companyName}`;
+  const message = `You have been invited to take an online test for the ${job.title} position at ${companyName}. Please complete the test before the deadline. Test Link: ${testLink}`;
+
+  await NotificationService.createBulkNotifications(
+    studentIds,
+    'Student',
+    title,
+    message,
+    'general',
+    'high',
+    {
+      jobId: jobId,
+      type: 'test_link',
+      testLink: testLink
+    }
+  );
+
+  // Log activity
+  await ActivityLog.create({
+    userId: req.user?.id as any,
+    action: 'TEST_LINK_SENT',
+    entityType: 'Job',
+    entityId: jobId,
+    details: `Sent test link to ${applications.length} ${target === 'shortlisted' ? 'shortlisted' : ''} applicants`
+  });
+
+  return ApiSuccess.send(res, {
+    sentTo: applications.length,
+    target,
+    jobTitle: job.title
+  }, 'Test link sent successfully');
+});
+
