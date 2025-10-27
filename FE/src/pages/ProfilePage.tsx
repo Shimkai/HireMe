@@ -24,6 +24,10 @@ import {
   ListItem,
   ListItemSecondaryAction,
   LinearProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import { 
   Edit, 
@@ -49,7 +53,27 @@ import { useAuth } from '../hooks/useAuth';
 import { User } from '../types';
 import { collegeService, College } from '../services/collegeService';
 import { userService } from '../services/userService';
+import { getImageUrl } from '../utils/imageUtils';
 import api from '../utils/api';
+
+// Predefined list of courses for student profile
+const PREDEFINED_COURSES = [
+  'Computer Science',
+  'Information Technology',
+  'Artificial Intelligence',
+  'AIML',
+  'Data Science',
+  'Cyber Security',
+  'ENTC',
+  'Civil Engineering',
+  'Mechanical Engineering',
+  'Electronics Engineering',
+  'Robotics',
+  'Automation',
+  'Electrical Engineering',
+  'Chemical Engineering',
+  'Biomedical Engineering',
+];
 
 const ProfilePage = () => {
   const { user, updateUser } = useAuth();
@@ -71,7 +95,7 @@ const ProfilePage = () => {
     cgpa: user?.studentDetails?.cgpa || '',
     yearOfCompletion: user?.studentDetails?.yearOfCompletion || '',
     registrationNumber: user?.studentDetails?.registrationNumber || '',
-    skills: user?.studentDetails?.areaOfInterest || [], // Load skills from user data
+    skills: user?.studentDetails?.skills || [], // Load skills from user data
     tenthPercentage: user?.studentDetails?.tenthMarks?.percentage?.toString() || '',
     twelfthPercentage: user?.studentDetails?.twelfthMarks?.percentage?.toString() || '',
     projects: user?.studentDetails?.projects || [],
@@ -164,7 +188,7 @@ const ProfilePage = () => {
         cgpa: user.studentDetails?.cgpa || '',
         yearOfCompletion: user.studentDetails?.yearOfCompletion || '',
         registrationNumber: user.studentDetails?.registrationNumber || '',
-        skills: user.studentDetails?.areaOfInterest || [], // Load skills from user data
+        skills: user.studentDetails?.skills || [], // Load skills from user data
         tenthPercentage: user.studentDetails?.tenthMarks?.percentage?.toString() || '',
         twelfthPercentage: user.studentDetails?.twelfthMarks?.percentage?.toString() || '',
         projects: user.studentDetails?.projects || [],
@@ -199,7 +223,15 @@ const ProfilePage = () => {
     }
   }, [user]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSelectChange = (e: any) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -243,25 +275,14 @@ const ProfilePage = () => {
           clearInterval(interval);
           setPhotoUploadProgress(100);
           
-          // Update form data with new avatar URL
-          setFormData(prev => ({
-            ...prev,
-            profileAvatar: response.data.data.profileAvatar,
-          }));
-
-          // Update user context
-          if (updateUser) {
-            const updatedUser = { ...user, profileAvatar: response.data.data.profileAvatar } as User;
-            console.log('ProfilePage: Updating user with new profileAvatar:', response.data.data.profileAvatar);
-            console.log('ProfilePage: Updated user object:', updatedUser);
+          // Update user context first (this will trigger useEffect to update formData)
+          if (updateUser && user) {
+            const newAvatarUrl = response.data.data.profileAvatar;
+            const updatedUser = { ...user, profileAvatar: newAvatarUrl } as User;
+            console.log('ProfilePage: Updating user with new profileAvatar:', newAvatarUrl);
+            console.log('ProfilePage: Current user.profileAvatar:', user.profileAvatar);
             updateUser(updatedUser);
-            
-            // Force a small delay to ensure the state update propagates
-            setTimeout(() => {
-              console.log('ProfilePage: User state should now be updated');
-              // Force a re-render by updating a dummy state if needed
-              setFormData(prev => ({ ...prev }));
-            }, 100);
+            console.log('ProfilePage: User context updated, should trigger re-render');
           }
 
           setSuccess('Profile photo uploaded successfully!');
@@ -278,6 +299,26 @@ const ProfilePage = () => {
     } finally {
       setUploadingPhoto(false);
       setPhotoUploadProgress(0);
+    }
+  };
+
+  const handleDownloadResume = async () => {
+    const resumeData = (formData as any).resume;
+    if (!resumeData || !resumeData.path) {
+      setError('No resume uploaded. Please upload a resume first.');
+      return;
+    }
+
+    try {
+      // Create a download link
+      const link = document.createElement('a');
+      link.href = resumeData.path;
+      link.download = resumeData.originalName || 'resume.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      setError('Failed to download resume. Please try again.');
     }
   };
 
@@ -302,7 +343,10 @@ const ProfilePage = () => {
         }, 200);
 
         // Make actual API call
-        const endpoint = type === 'resume' ? '/users/upload-resume' : `/users/upload-${type}`;
+        const endpoint = type === 'resume' ? '/users/upload-resume' : 
+                        type === 'tenthMarksheet' ? '/users/upload-tenth-marksheet' :
+                        type === 'twelfthMarksheet' ? '/users/upload-twelfth-marksheet' :
+                        '/users/upload-last-semester-marksheet';
         const fieldName = type === 'resume' ? 'resume' : 'marksheet';
         
         const uploadFormData = new FormData();
@@ -517,14 +561,14 @@ const ProfilePage = () => {
           // Only include nested objects if they have content
           ...(formData.tenthPercentage || (formData as any).tenthMarksheet?.path ? {
             tenthMarks: {
-              percentage: formData.tenthPercentage ? parseFloat(formData.tenthPercentage) : undefined,
-              marksheet: (formData as any).tenthMarksheet?.path,
+              ...(formData.tenthPercentage ? { percentage: parseFloat(formData.tenthPercentage) } : {}),
+              ...((formData as any).tenthMarksheet?.path ? { marksheet: (formData as any).tenthMarksheet.path } : {}),
             }
           } : {}),
           ...(formData.twelfthPercentage || (formData as any).twelfthMarksheet?.path ? {
             twelfthMarks: {
-              percentage: formData.twelfthPercentage ? parseFloat(formData.twelfthPercentage) : undefined,
-              marksheet: (formData as any).twelfthMarksheet?.path,
+              ...(formData.twelfthPercentage ? { percentage: parseFloat(formData.twelfthPercentage) } : {}),
+              ...((formData as any).twelfthMarksheet?.path ? { marksheet: (formData as any).twelfthMarksheet.path } : {}),
             }
           } : {}),
           // Backend expects lastSemesterMarksheet as a string path
@@ -541,12 +585,23 @@ const ProfilePage = () => {
           } : {}),
         };
       } else if (user?.role === 'Recruiter') {
+        // Helper function to ensure website URL has protocol
+        const normalizeWebsite = (url: string): string => {
+          if (!url) return '';
+          url = url.trim();
+          if (url && !url.match(/^https?:\/\//i)) {
+            // Prepend https:// if no protocol is specified
+            url = 'https://' + url;
+          }
+          return url;
+        };
+
         updateData.recruiterDetails = {
           companyName: formData.companyName,
           industry: formData.industry,
           designation: formData.designation,
           companyInfo: formData.companyInfo,
-          companyWebsite: formData.companyWebsite,
+          companyWebsite: normalizeWebsite(formData.companyWebsite),
         };
       } else if (user?.role === 'TnP') {
         updateData.tnpDetails = {
@@ -698,8 +753,9 @@ const ProfilePage = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <Box sx={{ position: 'relative', mr: 3 }}>
                     <Avatar
+                      key={user?.profileAvatar || formData.profileAvatar} // Force re-render when avatar changes
                       sx={{ width: 80, height: 80 }}
-                      src={formData.profileAvatar}
+                      src={getImageUrl(user?.profileAvatar || formData.profileAvatar, 'http://localhost:5000')}
                     >
                       {user.fullName.charAt(0)}
                     </Avatar>
@@ -777,9 +833,11 @@ const ProfilePage = () => {
                         Member since {new Date(user.createdAt).toLocaleDateString()}
                       </Typography>
                     </Box>
-                    <Typography variant="body2" color="textSecondary">
-                      <strong>College:</strong> {getCollegeName()}
-                    </Typography>
+                    {user.role === 'Student' && (
+                      <Typography variant="body2" color="textSecondary">
+                        <strong>College:</strong> {getCollegeName()}
+                      </Typography>
+                    )}
                   </Box>
                   <Box>
                     {!isEditing ? (
@@ -853,23 +911,22 @@ const ProfilePage = () => {
                     disabled={!isEditing}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                {user.role === 'Student' && (
+                  <Grid item xs={12} sm={6}>
                     {(() => {
                       const name = getCollegeName();
-                      const mapped = name === 'Amity University Noida'
-                        ? 'G. H. Raisoni College of Engineering and Management , Pune'
-                        : name;
                       return (
                         <TextField
                           fullWidth
                           label="College"
-                          value={mapped}
+                          value={name}
                           disabled
                           helperText="College cannot be changed"
                         />
                       );
                     })()}
-                </Grid>
+                  </Grid>
+                )}
               </Grid>
             </Paper>
           </Grid>
@@ -888,14 +945,21 @@ const ProfilePage = () => {
                   <Divider sx={{ mb: 2 }} />
                   <Grid container spacing={2}>
                     <Grid item xs={12} sm={6}>
-                      <TextField
-                        fullWidth
-                        label="Course Name"
-                        name="courseName"
-                        value={formData.courseName}
-                        onChange={handleChange}
-                        disabled={!isEditing}
-                      />
+                      <FormControl fullWidth disabled={!isEditing}>
+                        <InputLabel>Course Name</InputLabel>
+                        <Select
+                          label="Course Name"
+                          name="courseName"
+                          value={formData.courseName}
+                          onChange={handleSelectChange}
+                        >
+                          {PREDEFINED_COURSES.map((course) => (
+                            <MenuItem key={course} value={course}>
+                              {course}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
                     </Grid>
                     <Grid item xs={12} sm={6}>
                       <TextField
@@ -1237,49 +1301,85 @@ const ProfilePage = () => {
                         </Typography>
                         {(formData as any).resume ? (
                           <Box>
+                            <Chip
+                              icon={<AttachFile />}
+                              label="Resume uploaded"
+                              color="success"
+                              sx={{ mb: 1 }}
+                            />
                             <Typography variant="body2" sx={{ mb: 1 }}>
-                              <AttachFile sx={{ fontSize: 16, mr: 1, verticalAlign: 'middle' }} />
                               {(formData as any).resume.originalName}
                             </Typography>
-                            <br />
-                            <Button
-                              size="small"
-                              startIcon={<Download />}
-                              disabled={!isEditing}
-                            >
-                              Download
-                            </Button>
+                            <Box display="flex" gap={1} flexWrap="wrap">
+                              <Button
+                                size="small"
+                                startIcon={<Download />}
+                                onClick={() => handleDownloadResume()}
+                                variant="outlined"
+                              >
+                                Download
+                              </Button>
+                              {isEditing && (
+                                <Button
+                                  size="small"
+                                  startIcon={<Upload />}
+                                  onClick={() => document.getElementById('resume-replace')?.click()}
+                                  variant="outlined"
+                                >
+                                  Replace
+                                </Button>
+                              )}
+                            </Box>
+                            {isEditing && (
+                              <input
+                                accept=".pdf,.doc,.docx"
+                                style={{ display: 'none' }}
+                                id="resume-replace"
+                                type="file"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handleFileUpload(file, 'resume');
+                                }}
+                              />
+                            )}
                           </Box>
                         ) : (
                           <Box>
-                            <input
-                              accept=".pdf,.doc,.docx"
-                              style={{ display: 'none' }}
-                              id="resume"
-                              type="file"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) handleFileUpload(file, 'resume');
-                              }}
-                              disabled={!isEditing}
-                            />
-                            <label htmlFor="resume">
-                              <Button
-                                variant="outlined"
-                                component="span"
-                                startIcon={<Upload />}
-                                disabled={!isEditing || uploadingFiles.resume}
-                                fullWidth
-                              >
-                                Upload Resume
-                              </Button>
-                            </label>
-                            {uploadingFiles.resume && (
-                              <LinearProgress 
-                                variant="determinate" 
-                                value={uploadProgress.resume} 
-                                sx={{ mt: 1 }}
-                              />
+                            {isEditing ? (
+                              <>
+                                <input
+                                  accept=".pdf,.doc,.docx"
+                                  style={{ display: 'none' }}
+                                  id="resume"
+                                  type="file"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) handleFileUpload(file, 'resume');
+                                  }}
+                                />
+                                <label htmlFor="resume">
+                                  <Button
+                                    variant="outlined"
+                                    component="span"
+                                    startIcon={<Upload />}
+                                    disabled={uploadingFiles.resume}
+                                    fullWidth
+                                  >
+                                    Upload Resume
+                                  </Button>
+                                </label>
+                                {uploadingFiles.resume && (
+                                  <LinearProgress 
+                                    variant="determinate" 
+                                    value={uploadProgress.resume} 
+                                    sx={{ mt: 1 }}
+                                  />
+                                )}
+                              </>
+                            ) : (
+                              <Typography variant="body2" color="text.secondary">
+                                No resume uploaded. Click "Edit Profile" to upload your resume.
+                              </Typography>
                             )}
                           </Box>
                         )}

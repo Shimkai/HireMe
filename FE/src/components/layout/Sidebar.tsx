@@ -4,9 +4,7 @@ import {
   Work,
   Assignment,
   People,
-  Description,
   CheckCircle,
-  Analytics,
   Assessment,
   Person,
 } from '@mui/icons-material';
@@ -44,7 +42,6 @@ const Sidebar: React.FC<SidebarProps> = ({ open }) => {
     { text: 'My Profile', icon: <Person />, path: '/profile' },
     { text: 'Manage Students', icon: <People />, path: '/students' },
     { text: 'Approve Jobs', icon: <CheckCircle />, path: '/jobs/pending' },
-    { text: 'Analytics', icon: <Analytics />, path: '/analytics' },
     { text: 'Report', icon: <Assessment />, path: '/report' },
   ];
 

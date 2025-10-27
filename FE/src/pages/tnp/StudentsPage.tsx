@@ -1,5 +1,5 @@
-import { Container, Grid, Card, CardContent, Typography, Button, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Alert, CircularProgress, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
-import { Add, Edit, Delete, Visibility, CheckCircle, Cancel } from '@mui/icons-material';
+import { Container, Grid, Card, CardContent, Typography, Button, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Alert, CircularProgress, TextField, FormControl, InputLabel, Select, MenuItem, Avatar } from '@mui/material';
+import { Add, Edit, Delete, Visibility, CheckCircle, Cancel, Close, Download, Description, PictureAsPdf } from '@mui/icons-material';
 import MainLayout from '../../components/layout/MainLayout';
 import { useState, useEffect } from 'react';
 import { userService } from '../../services/userService';
@@ -18,6 +18,8 @@ const StudentsPage = () => {
   const [verificationReason, setVerificationReason] = useState('');
   const [processing, setProcessing] = useState(false);
   const [actionError, setActionError] = useState('');
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+  const [viewingStudent, setViewingStudent] = useState<User | null>(null);
 
   useEffect(() => {
     fetchStudents();
@@ -40,6 +42,31 @@ const StudentsPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFileDownload = (filePath: string, fileName: string) => {
+    if (!filePath) {
+      alert('No file available for download');
+      return;
+    }
+    
+    const link = document.createElement('a');
+    link.href = `http://localhost:5000${filePath}`;
+    link.download = fileName;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleFileView = (filePath: string) => {
+    if (!filePath) {
+      alert('No file available for viewing');
+      return;
+    }
+    
+    // Open file in new tab for viewing
+    window.open(`http://localhost:5000${filePath}`, '_blank');
   };
 
   const handleVerifyClick = (student: User) => {
@@ -285,7 +312,15 @@ const StudentsPage = () => {
                               />
                             </TableCell>
                             <TableCell>
-                              <IconButton size="small" color="primary">
+                              <IconButton 
+                                size="small" 
+                                color="primary"
+                                onClick={() => {
+                                  setViewingStudent(student);
+                                  setProfileDialogOpen(true);
+                                }}
+                                title="View Full Profile"
+                              >
                                 <Visibility />
                               </IconButton>
                               {!student.studentDetails?.isVerified ? (
@@ -363,6 +398,359 @@ const StudentsPage = () => {
               disabled={processing}
             >
               {processing ? <CircularProgress size={20} /> : 'Verify Student'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Student Profile View Dialog */}
+        <Dialog
+          open={profileDialogOpen}
+          onClose={() => {
+            setProfileDialogOpen(false);
+            setViewingStudent(null);
+          }}
+          maxWidth="md"
+          fullWidth
+          PaperProps={{
+            sx: { maxHeight: '90vh' }
+          }}
+        >
+          <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">
+              Student Profile - {viewingStudent?.fullName || 'Loading...'}
+            </Typography>
+            <IconButton onClick={() => setProfileDialogOpen(false)} size="small">
+              <Close />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent dividers>
+            {viewingStudent ? (
+              <Box>
+                {/* Profile Header */}
+                <Box display="flex" alignItems="center" gap={3} mb={3} p={2} sx={{ backgroundColor: 'grey.50', borderRadius: 2 }}>
+                  <Avatar
+                    src={viewingStudent.profileAvatar ? `http://localhost:5000${viewingStudent.profileAvatar}` : undefined}
+                    sx={{ width: 80, height: 80, fontSize: '2rem' }}
+                  >
+                    {viewingStudent.fullName.charAt(0)}
+                  </Avatar>
+                  <Box>
+                    <Typography variant="h5" gutterBottom>
+                      {viewingStudent.fullName}
+                    </Typography>
+                    <Typography variant="body1" color="text.secondary" gutterBottom>
+                      {viewingStudent.email}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {viewingStudent.mobileNumber}
+                    </Typography>
+                    <Box display="flex" gap={1} mt={1}>
+                      <Chip
+                        label={viewingStudent.studentDetails?.isVerified ? 'Verified' : 'Unverified'}
+                        color={viewingStudent.studentDetails?.isVerified ? 'success' : 'warning'}
+                        size="small"
+                      />
+                      <Chip
+                        label={viewingStudent.studentDetails?.placementStatus || 'Not Placed'}
+                        color={viewingStudent.studentDetails?.placementStatus === 'Placed' ? 'success' : 'default'}
+                        size="small"
+                      />
+                    </Box>
+                  </Box>
+                </Box>
+
+                <Grid container spacing={3}>
+                  {/* Academic Information */}
+                  <Grid item xs={12} md={6}>
+                    <Paper sx={{ p: 2 }}>
+                      <Typography variant="h6" gutterBottom color="primary">
+                        Academic Information
+                      </Typography>
+                      <Box sx={{ '& > *': { mb: 1 } }}>
+                        <Typography variant="body2">
+                          <strong>Course:</strong> {viewingStudent.studentDetails?.courseName}
+                        </Typography>
+                        <Typography variant="body2">
+                          <strong>College:</strong> {typeof viewingStudent.studentDetails?.college === 'object' && viewingStudent.studentDetails?.college
+                            ? viewingStudent.studentDetails.college.name 
+                            : viewingStudent.studentDetails?.college || 'Not specified'}
+                        </Typography>
+                        <Typography variant="body2">
+                          <strong>Year of Completion:</strong> {viewingStudent.studentDetails?.yearOfCompletion || 'Not specified'}
+                        </Typography>
+                        <Typography variant="body2">
+                          <strong>CGPA:</strong> {viewingStudent.studentDetails?.cgpa || 'Not specified'}
+                        </Typography>
+                        <Typography variant="body2">
+                          <strong>Registration Number:</strong> {viewingStudent.studentDetails?.registrationNumber || 'Not assigned'}
+                        </Typography>
+                      </Box>
+                    </Paper>
+                  </Grid>
+
+                  {/* Contact Information */}
+                  <Grid item xs={12} md={6}>
+                    <Paper sx={{ p: 2 }}>
+                      <Typography variant="h6" gutterBottom color="primary">
+                        Contact Information
+                      </Typography>
+                      <Box sx={{ '& > *': { mb: 1 } }}>
+                        <Typography variant="body2">
+                          <strong>Email:</strong> {viewingStudent.email}
+                        </Typography>
+                        <Typography variant="body2">
+                          <strong>Mobile:</strong> {viewingStudent.mobileNumber}
+                        </Typography>
+                        {viewingStudent.studentDetails?.address && (
+                          <>
+                            <Typography variant="body2">
+                              <strong>Address:</strong> {viewingStudent.studentDetails.address.street || 'Not specified'}
+                            </Typography>
+                            <Typography variant="body2">
+                              <strong>City:</strong> {viewingStudent.studentDetails.address.city || 'Not specified'}
+                            </Typography>
+                            <Typography variant="body2">
+                              <strong>State:</strong> {viewingStudent.studentDetails.address.state || 'Not specified'}
+                            </Typography>
+                            <Typography variant="body2">
+                              <strong>Pincode:</strong> {viewingStudent.studentDetails.address.pincode || 'Not specified'}
+                            </Typography>
+                          </>
+                        )}
+                      </Box>
+                    </Paper>
+                  </Grid>
+
+                  {/* Academic Performance */}
+                  <Grid item xs={12}>
+                    <Paper sx={{ p: 2 }}>
+                      <Typography variant="h6" gutterBottom color="primary">
+                        Academic Performance
+                      </Typography>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} md={4}>
+                          <Typography variant="body2">
+                            <strong>10th Percentage:</strong> {viewingStudent.studentDetails?.tenthMarks?.percentage || 'Not specified'}%
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={12} md={4}>
+                          <Typography variant="body2">
+                            <strong>12th Percentage:</strong> {viewingStudent.studentDetails?.twelfthMarks?.percentage || 'Not specified'}%
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={12} md={4}>
+                          <Typography variant="body2">
+                            <strong>Current CGPA:</strong> {viewingStudent.studentDetails?.cgpa || 'Not specified'}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+                    </Paper>
+                  </Grid>
+
+                  {/* Skills and Interests */}
+                  {viewingStudent.studentDetails?.areaOfInterest && viewingStudent.studentDetails.areaOfInterest.length > 0 && (
+                    <Grid item xs={12}>
+                      <Paper sx={{ p: 2 }}>
+                        <Typography variant="h6" gutterBottom color="primary">
+                          Skills & Interests
+                        </Typography>
+                        <Box display="flex" flexWrap="wrap" gap={1}>
+                          {viewingStudent.studentDetails.areaOfInterest.map((skill, index) => (
+                            <Chip key={index} label={skill} size="small" />
+                          ))}
+                        </Box>
+                      </Paper>
+                    </Grid>
+                  )}
+
+                  {/* Uploaded Documents */}
+                  <Grid item xs={12}>
+                    <Paper sx={{ p: 2 }}>
+                      <Typography variant="h6" gutterBottom color="primary">
+                        Uploaded Documents
+                      </Typography>
+                      <Grid container spacing={2}>
+                        {/* Resume */}
+                        <Grid item xs={12} md={6}>
+                          <Box sx={{ p: 2, border: '1px solid', borderColor: 'grey.300', borderRadius: 2 }}>
+                            <Box display="flex" alignItems="center" gap={1} mb={1}>
+                              <Description color="primary" />
+                              <Typography variant="subtitle2" fontWeight="bold">
+                                Resume
+                              </Typography>
+                            </Box>
+                            {viewingStudent.studentDetails?.resume ? (
+                              <Box display="flex" alignItems="center" gap={1}>
+                                <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1 }}>
+                                  Resume.pdf
+                                </Typography>
+                                <IconButton
+                                  size="small"
+                                  color="info"
+                                  onClick={() => handleFileView(viewingStudent.studentDetails!.resume!)}
+                                  title="View Resume"
+                                >
+                                  <Visibility />
+                                </IconButton>
+                                <IconButton
+                                  size="small"
+                                  color="primary"
+                                  onClick={() => handleFileDownload(
+                                    viewingStudent.studentDetails!.resume!,
+                                    `${viewingStudent.fullName}_Resume.pdf`
+                                  )}
+                                  title="Download Resume"
+                                >
+                                  <Download />
+                                </IconButton>
+                              </Box>
+                            ) : (
+                              <Typography variant="body2" color="text.secondary">
+                                No resume uploaded
+                              </Typography>
+                            )}
+                          </Box>
+                        </Grid>
+
+                        {/* 10th Marksheet */}
+                        <Grid item xs={12} md={6}>
+                          <Box sx={{ p: 2, border: '1px solid', borderColor: 'grey.300', borderRadius: 2 }}>
+                            <Box display="flex" alignItems="center" gap={1} mb={1}>
+                              <PictureAsPdf color="error" />
+                              <Typography variant="subtitle2" fontWeight="bold">
+                                10th Marksheet
+                              </Typography>
+                            </Box>
+                            {viewingStudent.studentDetails?.tenthMarks?.marksheet ? (
+                              <Box display="flex" alignItems="center" gap={1}>
+                                <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1 }}>
+                                  10th_Marksheet.pdf
+                                </Typography>
+                                <IconButton
+                                  size="small"
+                                  color="info"
+                                  onClick={() => handleFileView(viewingStudent.studentDetails!.tenthMarks!.marksheet!)}
+                                  title="View 10th Marksheet"
+                                >
+                                  <Visibility />
+                                </IconButton>
+                                <IconButton
+                                  size="small"
+                                  color="primary"
+                                  onClick={() => handleFileDownload(
+                                    viewingStudent.studentDetails!.tenthMarks!.marksheet!,
+                                    `${viewingStudent.fullName}_10th_Marksheet.pdf`
+                                  )}
+                                  title="Download 10th Marksheet"
+                                >
+                                  <Download />
+                                </IconButton>
+                              </Box>
+                            ) : (
+                              <Typography variant="body2" color="text.secondary">
+                                No 10th marksheet uploaded
+                              </Typography>
+                            )}
+                          </Box>
+                        </Grid>
+
+                        {/* 12th Marksheet */}
+                        <Grid item xs={12} md={6}>
+                          <Box sx={{ p: 2, border: '1px solid', borderColor: 'grey.300', borderRadius: 2 }}>
+                            <Box display="flex" alignItems="center" gap={1} mb={1}>
+                              <PictureAsPdf color="error" />
+                              <Typography variant="subtitle2" fontWeight="bold">
+                                12th Marksheet
+                              </Typography>
+                            </Box>
+                            {viewingStudent.studentDetails?.twelfthMarks?.marksheet ? (
+                              <Box display="flex" alignItems="center" gap={1}>
+                                <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1 }}>
+                                  12th_Marksheet.pdf
+                                </Typography>
+                                <IconButton
+                                  size="small"
+                                  color="info"
+                                  onClick={() => handleFileView(viewingStudent.studentDetails!.twelfthMarks!.marksheet!)}
+                                  title="View 12th Marksheet"
+                                >
+                                  <Visibility />
+                                </IconButton>
+                                <IconButton
+                                  size="small"
+                                  color="primary"
+                                  onClick={() => handleFileDownload(
+                                    viewingStudent.studentDetails!.twelfthMarks!.marksheet!,
+                                    `${viewingStudent.fullName}_12th_Marksheet.pdf`
+                                  )}
+                                  title="Download 12th Marksheet"
+                                >
+                                  <Download />
+                                </IconButton>
+                              </Box>
+                            ) : (
+                              <Typography variant="body2" color="text.secondary">
+                                No 12th marksheet uploaded
+                              </Typography>
+                            )}
+                          </Box>
+                        </Grid>
+
+                        {/* Last Semester Marksheet */}
+                        <Grid item xs={12} md={6}>
+                          <Box sx={{ p: 2, border: '1px solid', borderColor: 'grey.300', borderRadius: 2 }}>
+                            <Box display="flex" alignItems="center" gap={1} mb={1}>
+                              <PictureAsPdf color="error" />
+                              <Typography variant="subtitle2" fontWeight="bold">
+                                Last Semester Marksheet
+                              </Typography>
+                            </Box>
+                            {viewingStudent.studentDetails?.lastSemesterMarksheet ? (
+                              <Box display="flex" alignItems="center" gap={1}>
+                                <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1 }}>
+                                  Last_Semester_Marksheet.pdf
+                                </Typography>
+                                <IconButton
+                                  size="small"
+                                  color="info"
+                                  onClick={() => handleFileView(viewingStudent.studentDetails!.lastSemesterMarksheet!)}
+                                  title="View Last Semester Marksheet"
+                                >
+                                  <Visibility />
+                                </IconButton>
+                                <IconButton
+                                  size="small"
+                                  color="primary"
+                                  onClick={() => handleFileDownload(
+                                    viewingStudent.studentDetails!.lastSemesterMarksheet!,
+                                    `${viewingStudent.fullName}_Last_Semester_Marksheet.pdf`
+                                  )}
+                                  title="Download Last Semester Marksheet"
+                                >
+                                  <Download />
+                                </IconButton>
+                              </Box>
+                            ) : (
+                              <Typography variant="body2" color="text.secondary">
+                                No last semester marksheet uploaded
+                              </Typography>
+                            )}
+                          </Box>
+                        </Grid>
+                      </Grid>
+                    </Paper>
+                  </Grid>
+                </Grid>
+              </Box>
+            ) : (
+              <Box display="flex" justifyContent="center" p={4}>
+                <CircularProgress />
+              </Box>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setProfileDialogOpen(false)}>
+              Close
             </Button>
           </DialogActions>
         </Dialog>

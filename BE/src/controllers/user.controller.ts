@@ -97,21 +97,34 @@ export const updateProfile = asyncHandler(async (req: Request, res: Response) =>
       });
     }
     
-    // Merge only the clean data
+    // Merge only the clean data, but preserve file paths if they exist in the database
     user.studentDetails = { ...cleanExistingDetails, ...cleanStudentDetails };
+    
+    // Preserve marksheet paths if they exist in the database but weren't explicitly updated
+    if (user.studentDetails) {
+      if (cleanExistingDetails.tenthMarks?.marksheet && !cleanStudentDetails.tenthMarks?.marksheet) {
+        user.studentDetails.tenthMarks = {
+          ...user.studentDetails.tenthMarks,
+          ...cleanExistingDetails.tenthMarks,
+        };
+      }
+      if (cleanExistingDetails.twelfthMarks?.marksheet && !cleanStudentDetails.twelfthMarks?.marksheet) {
+        user.studentDetails.twelfthMarks = {
+          ...user.studentDetails.twelfthMarks,
+          ...cleanExistingDetails.twelfthMarks,
+        };
+      }
+      if (cleanExistingDetails.lastSemesterMarksheet && !cleanStudentDetails.lastSemesterMarksheet) {
+        user.studentDetails.lastSemesterMarksheet = cleanExistingDetails.lastSemesterMarksheet;
+      }
+      if (cleanExistingDetails.resume && !cleanStudentDetails.resume) {
+        (user.studentDetails as any).resume = cleanExistingDetails.resume;
+      }
+    }
     
     // Explicitly remove undefined nested objects that might cause Mongoose validation errors
     if (user.studentDetails && user.studentDetails.address === undefined) {
       delete user.studentDetails.address;
-    }
-    if (user.studentDetails && user.studentDetails.tenthMarks === undefined) {
-      delete user.studentDetails.tenthMarks;
-    }
-    if (user.studentDetails && user.studentDetails.twelfthMarks === undefined) {
-      delete user.studentDetails.twelfthMarks;
-    }
-    if (user.studentDetails && user.studentDetails.lastSemesterMarksheet === undefined) {
-      delete user.studentDetails.lastSemesterMarksheet;
     }
     
     // Automatically set student as unverified when profile is updated
@@ -366,7 +379,7 @@ export const uploadResume = asyncHandler(async (req: Request, res: Response) => 
   // Log the activity
   await ActivityLog.create({
     userId: user._id,
-    action: 'upload_resume',
+    action: 'RESUME_UPLOAD',
     details: {
       filename: req.file.filename,
       originalName: req.file.originalname,

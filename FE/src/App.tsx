@@ -14,7 +14,6 @@ import { useAuth } from './hooks/useAuth';
 // TnP Pages
 import StudentsPage from './pages/tnp/StudentsPage';
 import PendingJobsPage from './pages/tnp/PendingJobsPage';
-import AnalyticsPage from './pages/tnp/AnalyticsPage';
 import ReportPage from './pages/tnp/ReportPage';
 
 // Student Pages
@@ -165,14 +164,6 @@ function App() {
               element={
                 <ProtectedRoute>
                   <PendingJobsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/analytics"
-              element={
-                <ProtectedRoute>
-                  <AnalyticsPage />
                 </ProtectedRoute>
               }
             />

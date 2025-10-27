@@ -51,7 +51,11 @@ export const updateProfileSchema = Joi.object({
     industry: Joi.string().optional(),
     designation: Joi.string().optional(),
     companyInfo: Joi.string().max(1000).optional(),
-    companyWebsite: Joi.string().uri().allow('').optional(),
+    companyWebsite: Joi.alternatives().try(
+      Joi.string().uri({ allowRelative: false, relativeOnly: false }),
+      Joi.string().allow(''),
+      Joi.string().optional()
+    ),
   }).optional(),
   tnpDetails: Joi.object({
     designation: Joi.string().optional(),

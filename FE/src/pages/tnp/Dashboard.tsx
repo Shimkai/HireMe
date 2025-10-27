@@ -1,5 +1,5 @@
 import { Container, Grid, Card, CardContent, Typography, Button, Box } from '@mui/material';
-import { People, Work, Analytics, CheckCircle } from '@mui/icons-material';
+import { People, Work, CheckCircle } from '@mui/icons-material';
 import MainLayout from '../../components/layout/MainLayout';
 import { useNavigate } from 'react-router-dom';
 
@@ -10,7 +10,6 @@ const TnPDashboard = () => {
     { title: 'Total Students', value: '0', icon: <People fontSize="large" />, color: '#8B5CF6' },
     { title: 'Active Jobs', value: '0', icon: <Work fontSize="large" />, color: '#10B981' },
     { title: 'Pending Approvals', value: '0', icon: <CheckCircle fontSize="large" />, color: '#F59E0B' },
-    { title: 'Placement Rate', value: '0%', icon: <Analytics fontSize="large" />, color: '#EF4444' },
   ];
 
   return (
@@ -56,11 +55,6 @@ const TnPDashboard = () => {
             <Grid item>
               <Button variant="outlined" onClick={() => navigate('/jobs/pending')}>
                 Approve Jobs
-              </Button>
-            </Grid>
-            <Grid item>
-              <Button variant="outlined" onClick={() => navigate('/analytics')}>
-                View Analytics
               </Button>
             </Grid>
           </Grid>

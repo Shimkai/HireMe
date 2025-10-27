@@ -36,6 +36,8 @@ import studentRecommendationService, {
   StudentRecommendation,
   RecommendationStats,
 } from '../../services/studentRecommendationService';
+import StudentDetailsModal from '../common/StudentDetailsModal';
+import { User } from '../../types';
 
 interface RecommendedStudentsProps {
   jobId: string;
@@ -48,6 +50,8 @@ const RecommendedStudents: React.FC<RecommendedStudentsProps> = ({ jobId, open, 
   const [stats, setStats] = useState<RecommendationStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [studentDetailsModalOpen, setStudentDetailsModalOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<User | null>(null);
 
   useEffect(() => {
     if (open && jobId) {
@@ -94,6 +98,16 @@ const RecommendedStudents: React.FC<RecommendedStudentsProps> = ({ jobId, open, 
     if (percentage >= 60) return '#2196f3';
     if (percentage >= 40) return '#ff9800';
     return '#f44336';
+  };
+
+  const handleViewStudentDetails = (student: User) => {
+    setSelectedStudent(student);
+    setStudentDetailsModalOpen(true);
+  };
+
+  const handleCloseStudentDetailsModal = () => {
+    setStudentDetailsModalOpen(false);
+    setSelectedStudent(null);
   };
 
   return (
@@ -287,14 +301,11 @@ const RecommendedStudents: React.FC<RecommendedStudentsProps> = ({ jobId, open, 
                           </Box>
                         </TableCell>
                         <TableCell align="center">
-                          <Tooltip title="View Profile">
+                          <Tooltip title="View Student Details">
                             <IconButton
                               size="small"
                               color="primary"
-                              onClick={() => {
-                                // Navigate to student profile or open modal
-                                window.open(`/profile/${rec.student._id}`, '_blank');
-                              }}
+                              onClick={() => handleViewStudentDetails(rec.student as User)}
                             >
                               <VisibilityIcon />
                             </IconButton>
@@ -313,6 +324,13 @@ const RecommendedStudents: React.FC<RecommendedStudentsProps> = ({ jobId, open, 
       <DialogActions>
         <Button onClick={onClose}>Close</Button>
       </DialogActions>
+
+      {/* Student Details Modal */}
+      <StudentDetailsModal
+        open={studentDetailsModalOpen}
+        onClose={handleCloseStudentDetailsModal}
+        student={selectedStudent}
+      />
     </Dialog>
   );
 };

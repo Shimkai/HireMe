@@ -21,6 +21,25 @@ import { authService } from '../../services/authService';
 import { setCredentials } from '../../features/auth/authSlice';
 import { collegeService, College } from '../../services/collegeService';
 
+// Predefined list of courses for student registration
+const PREDEFINED_COURSES = [
+  'Computer Science',
+  'Information Technology',
+  'Artificial Intelligence',
+  'AIML',
+  'Data Science',
+  'Cyber Security',
+  'ENTC',
+  'Civil Engineering',
+  'Mechanical Engineering',
+  'Electronics Engineering',
+  'Robotics',
+  'Automation',
+  'Electrical Engineering',
+  'Chemical Engineering',
+  'Biomedical Engineering',
+];
+
 const Register = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -54,10 +73,7 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [colleges, setColleges] = useState<College[]>([]);
-  const displayCollegeName = (college: College) =>
-    college.name === 'Amity University Noida'
-      ? 'G. H. Raisoni College of Engineering and Management , Pune'
-      : college.name;
+  const displayCollegeName = (college: College) => college.name;
 
   // Fetch colleges on component mount
   useEffect(() => {
@@ -235,15 +251,21 @@ const Register = () => {
               <Typography variant="h6" sx={{ mt: 3, mb: 2 }} color="primary">
                 Student Information
               </Typography>
-              <TextField
-                fullWidth
-                label="Course Name"
-                name="studentDetails.courseName"
-                value={formData.studentDetails.courseName}
-                onChange={handleChange}
-                margin="normal"
-                required
-              />
+              <FormControl fullWidth margin="normal" required>
+                <InputLabel>Course Name</InputLabel>
+                <Select
+                  label="Course Name"
+                  name="studentDetails.courseName"
+                  value={formData.studentDetails.courseName}
+                  onChange={handleChange}
+                >
+                  {PREDEFINED_COURSES.map((course) => (
+                    <MenuItem key={course} value={course}>
+                      {course}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
               <Autocomplete
                 fullWidth
                 options={colleges}

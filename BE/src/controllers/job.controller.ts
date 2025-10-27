@@ -14,9 +14,32 @@ export const createJob = asyncHandler(async (req: Request, res: Response) => {
     throw ApiError.forbidden('Only recruiters can create jobs');
   }
 
+  // Auto-populate company name from recruiter profile
+  const companyName = req.user.recruiterDetails?.companyName || req.body.companyName;
+
+  // Handle empty strings for numeric fields by converting to undefined
+  const processNumericField = (value: any): number | undefined => {
+    if (value === '' || value === null || value === undefined) return undefined;
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+    return isNaN(num) ? undefined : num;
+  };
+
   const jobData = {
     ...req.body,
+    companyName,
     postedBy: req.user.id,
+    eligibility: {
+      ...req.body.eligibility,
+      minCGPA: processNumericField(req.body.eligibility?.minCGPA),
+      maxBacklogs: processNumericField(req.body.eligibility?.maxBacklogs),
+      minTenthPercentage: processNumericField(req.body.eligibility?.minTenthPercentage),
+      minTwelfthPercentage: processNumericField(req.body.eligibility?.minTwelfthPercentage),
+    },
+    ctc: {
+      ...req.body.ctc,
+      min: processNumericField(req.body.ctc?.min),
+      max: processNumericField(req.body.ctc?.max),
+    },
   };
 
   const job = await Job.create(jobData);

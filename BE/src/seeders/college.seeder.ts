@@ -43,7 +43,7 @@ const colleges = [
   { name: 'Delhi Technological University' },
   { name: 'Netaji Subhas University of Technology Delhi' },
   { name: 'SRM Institute of Science and Technology' },
-  { name: 'Amity University Noida' },
+  { name: 'G. H. Raisoni College of Engineering and Management, Pune' },
   { name: 'Thapar Institute of Engineering and Technology' },
   { name: 'PES University Bangalore' },
   { name: 'RV College of Engineering Bangalore' },

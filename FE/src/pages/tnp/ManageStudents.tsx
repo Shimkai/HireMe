@@ -37,6 +37,9 @@ import {
   Visibility,
   Download,
   Close,
+  PictureAsPdf,
+  Description,
+  GetApp,
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 import { userService } from '../../services/userService';
@@ -116,6 +119,31 @@ const ManageStudents: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFileDownload = (filePath: string, fileName: string) => {
+    if (!filePath) {
+      alert('No file available for download');
+      return;
+    }
+    
+    const link = document.createElement('a');
+    link.href = `http://localhost:5000${filePath}`;
+    link.download = fileName;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleFileView = (filePath: string) => {
+    if (!filePath) {
+      alert('No file available for viewing');
+      return;
+    }
+    
+    // Open file in new tab for viewing
+    window.open(`http://localhost:5000${filePath}`, '_blank');
   };
 
   const handleVerifyStudent = async () => {
@@ -577,14 +605,24 @@ const ManageStudents: React.FC = () => {
                             <strong>Percentage:</strong> {viewingStudent.studentDetails?.tenthMarks?.percentage || 'Not specified'}%
                           </Typography>
                           {viewingStudent.studentDetails?.tenthMarks?.marksheet && (
-                            <Button
-                              size="small"
-                              startIcon={<Download />}
-                              onClick={() => window.open(`http://localhost:5000${viewingStudent.studentDetails?.tenthMarks?.marksheet}`, '_blank')}
-                              sx={{ mt: 1 }}
-                            >
-                              Download Marksheet
-                            </Button>
+                            <Box display="flex" gap={1} mt={1}>
+                              <Button
+                                size="small"
+                                startIcon={<Visibility />}
+                                onClick={() => handleFileView(viewingStudent.studentDetails?.tenthMarks?.marksheet!)}
+                                color="info"
+                                variant="outlined"
+                              >
+                                View
+                              </Button>
+                              <Button
+                                size="small"
+                                startIcon={<Download />}
+                                onClick={() => window.open(`http://localhost:5000${viewingStudent.studentDetails?.tenthMarks?.marksheet}`, '_blank')}
+                              >
+                                Download
+                              </Button>
+                            </Box>
                           )}
                         </Box>
                       </Grid>
@@ -597,14 +635,24 @@ const ManageStudents: React.FC = () => {
                             <strong>Percentage:</strong> {viewingStudent.studentDetails?.twelfthMarks?.percentage || 'Not specified'}%
                           </Typography>
                           {viewingStudent.studentDetails?.twelfthMarks?.marksheet && (
-                            <Button
-                              size="small"
-                              startIcon={<Download />}
-                              onClick={() => window.open(`http://localhost:5000${viewingStudent.studentDetails?.twelfthMarks?.marksheet}`, '_blank')}
-                              sx={{ mt: 1 }}
-                            >
-                              Download Marksheet
-                            </Button>
+                            <Box display="flex" gap={1} mt={1}>
+                              <Button
+                                size="small"
+                                startIcon={<Visibility />}
+                                onClick={() => handleFileView(viewingStudent.studentDetails?.twelfthMarks?.marksheet!)}
+                                color="info"
+                                variant="outlined"
+                              >
+                                View
+                              </Button>
+                              <Button
+                                size="small"
+                                startIcon={<Download />}
+                                onClick={() => window.open(`http://localhost:5000${viewingStudent.studentDetails?.twelfthMarks?.marksheet}`, '_blank')}
+                              >
+                                Download
+                              </Button>
+                            </Box>
                           )}
                         </Box>
                       </Grid>
@@ -617,18 +665,69 @@ const ManageStudents: React.FC = () => {
                             <strong>Marksheet:</strong> {viewingStudent.studentDetails?.lastSemesterMarksheet ? 'Available' : 'Not uploaded'}
                           </Typography>
                           {viewingStudent.studentDetails?.lastSemesterMarksheet && (
-                            <Button
-                              size="small"
-                              startIcon={<Download />}
-                              onClick={() => window.open(`http://localhost:5000${viewingStudent.studentDetails?.lastSemesterMarksheet}`, '_blank')}
-                              sx={{ mt: 1 }}
-                            >
-                              Download Marksheet
-                            </Button>
+                            <Box display="flex" gap={1} mt={1}>
+                              <Button
+                                size="small"
+                                startIcon={<Visibility />}
+                                onClick={() => handleFileView(viewingStudent.studentDetails?.lastSemesterMarksheet!)}
+                                color="info"
+                                variant="outlined"
+                              >
+                                View
+                              </Button>
+                              <Button
+                                size="small"
+                                startIcon={<Download />}
+                                onClick={() => window.open(`http://localhost:5000${viewingStudent.studentDetails?.lastSemesterMarksheet}`, '_blank')}
+                              >
+                                Download
+                              </Button>
+                            </Box>
                           )}
                         </Box>
                       </Grid>
                     </Grid>
+                  </Paper>
+                </Grid>
+
+                {/* Resume Section */}
+                <Grid item xs={12}>
+                  <Paper sx={{ p: 2 }}>
+                    <Typography variant="h6" gutterBottom color="primary">
+                      Resume
+                    </Typography>
+                    <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
+                      <Typography variant="body2" gutterBottom>
+                        <strong>Resume:</strong> {viewingStudent.studentDetails?.resume ? 'Available' : 'Not uploaded'}
+                      </Typography>
+                      {viewingStudent.studentDetails?.resume ? (
+                        <Box display="flex" gap={1} mt={1}>
+                          <Button
+                            size="small"
+                            startIcon={<Visibility />}
+                            onClick={() => handleFileView(viewingStudent.studentDetails?.resume!)}
+                            sx={{ mt: 1 }}
+                            color="info"
+                            variant="outlined"
+                          >
+                            View Resume
+                          </Button>
+                          <Button
+                            size="small"
+                            startIcon={<Description />}
+                            onClick={() => window.open(`http://localhost:5000${viewingStudent.studentDetails?.resume}`, '_blank')}
+                            sx={{ mt: 1 }}
+                            color="primary"
+                          >
+                            Download Resume
+                          </Button>
+                        </Box>
+                      ) : (
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                          Student has not uploaded a resume yet.
+                        </Typography>
+                      )}
+                    </Box>
                   </Paper>
                 </Grid>
 

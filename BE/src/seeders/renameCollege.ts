@@ -6,7 +6,7 @@ import { logger } from '../utils/logger';
 dotenv.config();
 
 const OLD_NAME = 'Amity University Noida';
-const NEW_NAME = 'G. H. Raisoni College of Engineering and Management , Pune';
+const NEW_NAME = 'G. H. Raisoni College of Engineering and Management, Pune';
 
 async function run() {
   try {

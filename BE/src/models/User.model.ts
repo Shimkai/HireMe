@@ -26,6 +26,7 @@ interface IStudentDetails {
     marksheet?: string;
   };
   lastSemesterMarksheet?: string;
+  resume?: string;
   areaOfInterest?: string[];
   skills?: string[];
   projects?: Array<{

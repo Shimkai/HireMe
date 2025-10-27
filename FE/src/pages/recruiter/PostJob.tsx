@@ -53,7 +53,7 @@ const PostJob: React.FC = () => {
     eligibility: {
       minCGPA: '',
       allowedCourses: [] as string[],
-      maxBacklogs: 0,
+      maxBacklogs: '',
       yearOfCompletion: [] as number[],
     },
     ctc: {
@@ -226,7 +226,7 @@ const PostJob: React.FC = () => {
         eligibility: {
           minCGPA: '',
           allowedCourses: [],
-          maxBacklogs: 0,
+          maxBacklogs: '',
           yearOfCompletion: [],
         },
         ctc: {
@@ -467,10 +467,10 @@ const PostJob: React.FC = () => {
               fullWidth
               label="Maximum Backlogs"
               value={jobData.eligibility.maxBacklogs}
-              onChange={(e) => handleInputChange('eligibility.maxBacklogs', parseInt(e.target.value))}
+              onChange={(e) => handleInputChange('eligibility.maxBacklogs', e.target.value)}
               type="number"
               inputProps={{ min: 0 }}
-              placeholder="e.g., 0"
+              placeholder="Enter number (e.g., 0)"
             />
           </Grid>
           <Grid item xs={12}>

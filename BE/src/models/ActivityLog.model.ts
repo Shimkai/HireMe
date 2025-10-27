@@ -16,6 +16,7 @@ export interface IActivityLog extends Document {
     | 'APPLICATION_WITHDRAW'
     | 'RESUME_CREATE'
     | 'RESUME_UPDATE'
+    | 'RESUME_UPLOAD'
     | 'STUDENT_VERIFY'
     | 'STUDENT_UNVERIFY'
     | 'PROFILE_UPDATE'
@@ -53,6 +54,7 @@ const activityLogSchema = new Schema<IActivityLog>(
         'APPLICATION_WITHDRAW',
         'RESUME_CREATE',
         'RESUME_UPDATE',
+        'RESUME_UPLOAD',
         'STUDENT_VERIFY',
         'STUDENT_UNVERIFY',
         'PROFILE_UPDATE',
