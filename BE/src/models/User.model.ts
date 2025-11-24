@@ -213,7 +213,7 @@ const userSchema = new Schema<IUser>(
           'Photography',
           'Other',
           // Technical skills from registration
-          'JavaScript', 'Python', 'Java', 'C++', 'React', 'Angular', 'Vue.js', 'Node.js',
+          'JavaScript', 'Python', 'Java', 'C++', 'React', 'Next.js', 'Angular', 'Vue.js', 'Node.js', 'CSS', 'HTML',
           'MongoDB', 'MySQL', 'PostgreSQL', 'Redis', 'Docker', 'Kubernetes', 'AWS',
           'Azure', 'GCP', 'CI/CD', 'Git', 'Linux', 'TypeScript', 'Express.js',
           'Spring Boot', 'Django', 'Flask', 'TensorFlow', 'PyTorch', 'Pandas', 'NumPy',

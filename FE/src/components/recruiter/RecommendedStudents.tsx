@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -12,32 +12,36 @@ import {
   TableHead,
   TableRow,
   Paper,
+  IconButton,
   Typography,
   Chip,
   Box,
   LinearProgress,
-  Avatar,
-  IconButton,
-  Tooltip,
   Alert,
   CircularProgress,
-  Grid,
-  Card,
-  CardContent,
+  Tooltip,
 } from '@mui/material';
 import {
-  Close as CloseIcon,
   Visibility as VisibilityIcon,
-  School as SchoolIcon,
-  Code as CodeIcon,
+  CheckCircle as CheckCircleIcon,
+  Person as PersonIcon,
   TrendingUp as TrendingUpIcon,
 } from '@mui/icons-material';
-import studentRecommendationService, {
-  StudentRecommendation,
-  RecommendationStats,
-} from '../../services/studentRecommendationService';
-import StudentDetailsModal from '../common/StudentDetailsModal';
-import { User } from '../../types';
+import api from '../../utils/api';
+
+interface RecommendedStudent {
+  student_id: string;
+  name: string;
+  branch: string;
+  cgpa: number;
+  tenth_percentage: number;
+  twelfth_percentage: number;
+  match_score: number;
+  skill_overlap: number;
+  skills: string[];
+  reason: string;
+  applicationStatus?: string;
+}
 
 interface RecommendedStudentsProps {
   jobId: string;
@@ -46,292 +50,322 @@ interface RecommendedStudentsProps {
 }
 
 const RecommendedStudents: React.FC<RecommendedStudentsProps> = ({ jobId, open, onClose }) => {
-  const [recommendations, setRecommendations] = useState<StudentRecommendation[]>([]);
-  const [stats, setStats] = useState<RecommendationStats | null>(null);
+  const [students, setStudents] = useState<RecommendedStudent[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [studentDetailsModalOpen, setStudentDetailsModalOpen] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<User | null>(null);
+  const [shortlistedIds, setShortlistedIds] = useState<Set<string>>(new Set());
+  const [placing, setPlacing] = useState(false);
+  const [placedStudentId, setPlacedStudentId] = useState<string | null>(null);
+  const [viewingStudent, setViewingStudent] = useState<RecommendedStudent | null>(null);
 
   useEffect(() => {
     if (open && jobId) {
       fetchRecommendations();
-      fetchStats();
+      fetchApplicationStatuses();
     }
   }, [open, jobId]);
 
-  const fetchRecommendations = async () => {
+  const fetchApplicationStatuses = async () => {
     try {
-      setLoading(true);
-      setError('');
-      const data = await studentRecommendationService.getRecommendedStudents(jobId, {
-        limit: 10,
-        minScore: 0,
+      const response = await api.get(`/applications/job/${jobId}`);
+      const applications = response.data?.data || response.data || [];
+      
+      const shortlisted = new Set<string>();
+      const placed = new Set<string>();
+      
+      applications.forEach((app: any) => {
+        const studentId = app.studentId?._id || app.studentId;
+        if (app.status === 'Shortlisted') {
+          shortlisted.add(studentId);
+        } else if (app.status === 'Accepted' || app.status === 'Offered') {
+          placed.add(studentId);
+          setPlacedStudentId(studentId);
+        }
       });
-      setRecommendations(data);
+      
+      setShortlistedIds(shortlisted);
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || 'Failed to fetch recommendations');
+      console.error('Error fetching application statuses:', err);
+    }
+  };
+
+  const fetchRecommendations = async () => {
+    setLoading(true);
+    setError('');
+    
+    try {
+      const response = await api.get(`/recommendations/job/${jobId}?top_k=30`);
+      console.log('Full recommendation response:', response);
+      console.log('Recommendation data:', response.data);
+      
+      // Handle different response structures
+      let studentsData = [];
+      
+      if (response.data && response.data.success && response.data.data) {
+        // Structure: { success: true, data: [...], message: "..." }
+        studentsData = response.data.data;
+      } else if (response.data && Array.isArray(response.data)) {
+        // Structure: [...]
+        studentsData = response.data;
+      } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
+        // Structure: { data: [...] }
+        studentsData = response.data.data;
+      }
+      
+      console.log('Parsed students data:', studentsData);
+      console.log('Number of students:', studentsData.length);
+      
+      setStudents(studentsData);
+    } catch (err: any) {
       console.error('Error fetching recommendations:', err);
+      console.error('Error response:', err.response);
+      setError(err.response?.data?.message || err.response?.data?.error?.message || 'Failed to fetch recommendations');
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchStats = async () => {
+  const handleShortlist = async (studentId: string) => {
     try {
-      const statsData = await studentRecommendationService.getRecommendationStats(jobId);
-      setStats(statsData);
+      const response = await api.post('/recommendations/shortlist', {
+        jobId,
+        studentId,
+      });
+      
+      console.log('Shortlist response:', response);
+      setShortlistedIds(prev => new Set([...prev, studentId]));
+      
+      // Show success notification if available
+      if (window.confirm) {
+        // For now, just update state
+      }
     } catch (err: any) {
-      console.error('Error fetching stats:', err);
+      console.error('Error shortlisting student:', err);
+      alert(err.response?.data?.message || 'Failed to shortlist student');
     }
   };
 
-  const getScoreColor = (score: number): string => {
+  const handlePlace = async (studentId: string) => {
+    if (!window.confirm('Are you sure you want to accept/place this student for this job?')) {
+      return;
+    }
+
+    setPlacing(true);
+    try {
+      await api.post('/recommendations/place', {
+        jobId,
+        studentId,
+      });
+      
+      setPlacedStudentId(studentId);
+      alert('Student accepted/placed successfully!');
+      onClose();
+    } catch (err: any) {
+      console.error('Error placing student:', err);
+      alert(err.response?.data?.message || 'Failed to place student. Please try again.');
+    } finally {
+      setPlacing(false);
+    }
+  };
+
+  const getMatchColor = (score: number) => {
     if (score >= 80) return 'success';
-    if (score >= 60) return 'info';
-    if (score >= 40) return 'warning';
-    return 'error';
-  };
-
-  const getMatchColor = (percentage: number): string => {
-    if (percentage >= 80) return '#4caf50';
-    if (percentage >= 60) return '#2196f3';
-    if (percentage >= 40) return '#ff9800';
-    return '#f44336';
-  };
-
-  const handleViewStudentDetails = (student: User) => {
-    setSelectedStudent(student);
-    setStudentDetailsModalOpen(true);
-  };
-
-  const handleCloseStudentDetailsModal = () => {
-    setStudentDetailsModalOpen(false);
-    setSelectedStudent(null);
+    if (score >= 60) return 'warning';
+    return 'default';
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
-      <DialogTitle>
-        <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Box display="flex" alignItems="center" gap={1}>
-            <TrendingUpIcon color="primary" />
+    <>
+      <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <PersonIcon />
             <Typography variant="h6">Recommended Students</Typography>
           </Box>
-          <IconButton onClick={onClose} size="small">
-            <CloseIcon />
-          </IconButton>
-        </Box>
-      </DialogTitle>
+        </DialogTitle>
+        <DialogContent>
+          {loading && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          )}
 
-      <DialogContent dividers>
-        {loading ? (
-          <Box display="flex" justifyContent="center" alignItems="center" minHeight="300px">
-            <CircularProgress />
-          </Box>
-        ) : error ? (
-          <Alert severity="error">{error}</Alert>
-        ) : (
-          <>
-            {/* Statistics Cards */}
-            {stats && (
-              <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={12} md={3}>
-                  <Card>
-                    <CardContent>
-                      <Typography variant="caption" color="textSecondary">
-                        Total Matches
-                      </Typography>
-                      <Typography variant="h4" color="primary">
-                        {stats.totalRecommendations}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-                <Grid item xs={12} md={3}>
-                  <Card>
-                    <CardContent>
-                      <Typography variant="caption" color="textSecondary">
-                        Average Score
-                      </Typography>
-                      <Typography variant="h4" color="primary">
-                        {stats.averageScore.toFixed(1)}%
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-                <Grid item xs={12} md={3}>
-                  <Card>
-                    <CardContent>
-                      <Typography variant="caption" color="textSecondary">
-                        Top Score
-                      </Typography>
-                      <Typography variant="h4" color="primary">
-                        {stats.topScore.toFixed(1)}%
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-                <Grid item xs={12} md={3}>
-                  <Card>
-                    <CardContent>
-                      <Typography variant="caption" color="textSecondary">
-                        Excellent Matches
-                      </Typography>
-                      <Typography variant="h4" color="success.main">
-                        {stats.skillMatchDistribution.excellent}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              </Grid>
-            )}
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
 
-            {recommendations.length === 0 ? (
-              <Alert severity="info">
-                No students found matching the job requirements. Try adjusting the eligibility criteria.
-              </Alert>
-            ) : (
-              <TableContainer component={Paper} variant="outlined">
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Rank</TableCell>
-                      <TableCell>Student</TableCell>
-                      <TableCell>Branch</TableCell>
-                      <TableCell>CGPA</TableCell>
-                      <TableCell>Skill Match</TableCell>
-                      <TableCell>Overall Score</TableCell>
-                      <TableCell>Matching Skills</TableCell>
-                      <TableCell align="center">Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {recommendations.map((rec, index) => (
-                      <TableRow key={rec.student._id} hover>
-                        <TableCell>
-                          <Chip
-                            label={`#${index + 1}`}
-                            size="small"
-                            color={index < 3 ? 'primary' : 'default'}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Box display="flex" alignItems="center" gap={1}>
-                            <Avatar
-                              src={rec.student.profileAvatar}
-                              alt={rec.student.fullName}
-                              sx={{ width: 32, height: 32 }}
-                            >
-                              {rec.student.fullName.charAt(0)}
-                            </Avatar>
-                            <Box>
-                              <Typography variant="body2" fontWeight="medium">
-                                {rec.student.fullName}
-                              </Typography>
-                              <Typography variant="caption" color="textSecondary">
-                                {rec.student.registrationNumber || rec.student.email}
-                              </Typography>
-                            </Box>
-                          </Box>
-                        </TableCell>
-                        <TableCell>
-                          <Box display="flex" alignItems="center" gap={0.5}>
-                            <SchoolIcon fontSize="small" color="action" />
-                            <Typography variant="body2">{rec.student.branch || 'N/A'}</Typography>
-                          </Box>
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={rec.student.cgpa?.toFixed(2) || 'N/A'}
-                            size="small"
-                            color={rec.meetsRequirements.cgpa ? 'success' : 'default'}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Box>
-                            <Box display="flex" justifyContent="space-between" mb={0.5}>
-                              <Typography variant="caption" fontWeight="medium">
-                                {rec.skillMatch.matchPercentage.toFixed(0)}%
-                              </Typography>
-                              <Typography variant="caption" color="textSecondary">
-                                {rec.skillMatch.matchingSkills.length} skills
-                              </Typography>
-                            </Box>
-                            <LinearProgress
-                              variant="determinate"
-                              value={rec.skillMatch.matchPercentage}
-                              sx={{
-                                height: 6,
-                                borderRadius: 3,
-                                backgroundColor: '#e0e0e0',
-                                '& .MuiLinearProgress-bar': {
-                                  backgroundColor: getMatchColor(rec.skillMatch.matchPercentage),
-                                },
-                              }}
-                            />
-                          </Box>
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={`${rec.score.toFixed(1)}%`}
-                            color={getScoreColor(rec.score) as any}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Box display="flex" flexWrap="wrap" gap={0.5} maxWidth={200}>
-                            {rec.skillMatch.matchingSkills.slice(0, 3).map((skill) => (
-                              <Chip
-                                key={skill}
-                                label={skill}
-                                size="small"
-                                icon={<CodeIcon fontSize="small" />}
-                                variant="outlined"
-                                color="primary"
-                              />
-                            ))}
-                            {rec.skillMatch.matchingSkills.length > 3 && (
-                              <Chip
-                                label={`+${rec.skillMatch.matchingSkills.length - 3}`}
-                                size="small"
-                                variant="outlined"
-                              />
-                            )}
-                          </Box>
-                        </TableCell>
-                        <TableCell align="center">
-                          <Tooltip title="View Student Details">
+          {!loading && !error && students.length === 0 && (
+            <Alert severity="info">
+              No students match the job requirements.
+            </Alert>
+          )}
+
+          {!loading && students.length > 0 && (
+            <TableContainer component={Paper} sx={{ mt: 2 }}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Student Name</TableCell>
+                    <TableCell>Branch</TableCell>
+                    <TableCell>CGPA</TableCell>
+                    <TableCell>10th %</TableCell>
+                    <TableCell>12th %</TableCell>
+                    <TableCell>Match Score</TableCell>
+                    <TableCell>Skill Overlap</TableCell>
+                    <TableCell>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {students.map((student) => (
+                    <TableRow key={student.student_id}>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          {shortlistedIds.has(student.student_id) && (
+                            <CheckCircleIcon color="success" fontSize="small" />
+                          )}
+                          <Typography variant="body2" fontWeight="medium">
+                            {student.name}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>{student.branch}</TableCell>
+                      <TableCell>{student.cgpa}</TableCell>
+                      <TableCell>{student.tenth_percentage}%</TableCell>
+                      <TableCell>{student.twelfth_percentage}%</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={`${student.match_score}%`}
+                          color={getMatchColor(student.match_score)}
+                          size="small"
+                          icon={<TrendingUpIcon />}
+                        />
+                      </TableCell>
+                      <TableCell>{student.skill_overlap}%</TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Tooltip title="View Details">
                             <IconButton
                               size="small"
+                              onClick={() => setViewingStudent(student)}
                               color="primary"
-                              onClick={() => handleViewStudentDetails(rec.student as User)}
                             >
                               <VisibilityIcon />
                             </IconButton>
                           </Tooltip>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            )}
-          </>
-        )}
-      </DialogContent>
-
-      <DialogActions>
-        <Button onClick={onClose}>Close</Button>
-      </DialogActions>
+                          {placedStudentId === student.student_id && (
+                            <Button
+                              size="small"
+                              variant="contained"
+                              color="success"
+                              disabled
+                            >
+                              Placed/Accepted
+                            </Button>
+                          )}
+                          {placedStudentId !== student.student_id && !shortlistedIds.has(student.student_id) && (
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="success"
+                              onClick={() => handleShortlist(student.student_id)}
+                            >
+                              Shortlist
+                            </Button>
+                          )}
+                          {placedStudentId !== student.student_id && shortlistedIds.has(student.student_id) && (
+                            <Button
+                              size="small"
+                              variant="contained"
+                              color="primary"
+                              disabled={placing}
+                              onClick={() => handlePlace(student.student_id)}
+                            >
+                              {placing ? <CircularProgress size={20} /> : 'Place / Accept'}
+                            </Button>
+                          )}
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onClose}>Close</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Student Details Modal */}
-      <StudentDetailsModal
-        open={studentDetailsModalOpen}
-        onClose={handleCloseStudentDetailsModal}
-        student={selectedStudent}
-      />
-    </Dialog>
+      {viewingStudent && (
+        <Dialog open={!!viewingStudent} onClose={() => setViewingStudent(null)} maxWidth="md" fullWidth>
+          <DialogTitle>Student Details - {viewingStudent.name}</DialogTitle>
+          <DialogContent>
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Match Score: {viewingStudent.match_score}%
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Reason: {viewingStudent.reason}
+              </Typography>
+            </Box>
+
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle1" gutterBottom fontWeight="bold">
+                Academic Information
+              </Typography>
+              <Typography variant="body2">Branch: {viewingStudent.branch}</Typography>
+              <Typography variant="body2">CGPA: {viewingStudent.cgpa}</Typography>
+              <Typography variant="body2">10th Percentage: {viewingStudent.tenth_percentage}%</Typography>
+              <Typography variant="body2">12th Percentage: {viewingStudent.twelfth_percentage}%</Typography>
+            </Box>
+
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle1" gutterBottom fontWeight="bold">
+                Skills ({viewingStudent.skills.length})
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {viewingStudent.skills.map((skill, idx) => (
+                  <Chip key={idx} label={skill} size="small" variant="outlined" />
+                ))}
+              </Box>
+            </Box>
+
+            <Box>
+              <Typography variant="subtitle1" gutterBottom fontWeight="bold">
+                Recommendation Details
+              </Typography>
+              <LinearProgress
+                variant="determinate"
+                value={viewingStudent.match_score}
+                sx={{ height: 8, borderRadius: 1 }}
+              />
+              <Typography variant="caption" color="text.secondary" mt={1} display="block">
+                {viewingStudent.skill_overlap}% skills match job requirements
+              </Typography>
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setViewingStudent(null)}>Close</Button>
+            {!shortlistedIds.has(viewingStudent.student_id) && (
+              <Button
+                variant="contained"
+                color="success"
+                onClick={() => {
+                  handleShortlist(viewingStudent.student_id);
+                  setViewingStudent(null);
+                }}
+              >
+                Shortlist Student
+              </Button>
+            )}
+          </DialogActions>
+        </Dialog>
+      )}
+    </>
   );
 };
 

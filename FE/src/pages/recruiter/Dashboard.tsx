@@ -2,16 +2,40 @@ import { Container, Grid, Card, CardContent, Typography, Button, Box } from '@mu
 import { Work, People, Analytics, CheckCircle } from '@mui/icons-material';
 import MainLayout from '../../components/layout/MainLayout';
 import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import api from '../../utils/api';
 
 const RecruiterDashboard = () => {
   const navigate = useNavigate();
-
-  const stats = [
+  const [stats, setStats] = useState([
     { title: 'Active Jobs', value: '0', icon: <Work fontSize="large" />, color: '#8B5CF6' },
     { title: 'Total Applications', value: '0', icon: <People fontSize="large" />, color: '#10B981' },
     { title: 'Interviews Scheduled', value: '0', icon: <CheckCircle fontSize="large" />, color: '#F59E0B' },
     { title: 'Hired Candidates', value: '0', icon: <Analytics fontSize="large" />, color: '#EF4444' },
-  ];
+  ]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStatistics = async () => {
+      try {
+        const response = await api.get('/users/recruiter/statistics');
+        const data = response.data.data;
+        
+        setStats([
+          { title: 'Active Jobs', value: data.activeJobs?.toString() || '0', icon: <Work fontSize="large" />, color: '#8B5CF6' },
+          { title: 'Total Applications', value: data.totalApplications?.toString() || '0', icon: <People fontSize="large" />, color: '#10B981' },
+          { title: 'Interviews Scheduled', value: data.interviewsScheduled?.toString() || '0', icon: <CheckCircle fontSize="large" />, color: '#F59E0B' },
+          { title: 'Hired Candidates', value: data.hiredCandidates?.toString() || '0', icon: <Analytics fontSize="large" />, color: '#EF4444' },
+        ]);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching statistics:', error);
+        setLoading(false);
+      }
+    };
+
+    fetchStatistics();
+  }, []);
 
   return (
     <MainLayout>

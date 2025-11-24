@@ -1,7 +1,7 @@
 import { Container, Grid, Card, CardContent, Typography, Button, Box, Alert, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Chip } from '@mui/material';
 import { Work, Assignment, Event, CheckCircle, VerifiedUser, Warning } from '@mui/icons-material';
 import MainLayout from '../../components/layout/MainLayout';
-import RecommendedJobs from '../../components/RecommendedJobs';
+import Recommendations from '../../components/jobs/Recommendations';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useState, useEffect } from 'react';
@@ -120,8 +120,8 @@ const StudentDashboard = () => {
           </Grid>
         </Box>
 
-        {/* Recommended Jobs Section */}
-        <RecommendedJobs limit={6} />
+        {/* AI-Powered Job Recommendations */}
+        <Recommendations limit={6} />
 
         <Card sx={{ mt: 4, bgcolor: 'primary.light', color: 'white' }}>
           <CardContent>

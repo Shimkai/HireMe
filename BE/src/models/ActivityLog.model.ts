@@ -21,7 +21,8 @@ export interface IActivityLog extends Document {
     | 'STUDENT_UNVERIFY'
     | 'PROFILE_UPDATE'
     | 'AVATAR_UPDATE'
-    | 'PASSWORD_CHANGE';
+    | 'PASSWORD_CHANGE'
+    | 'TEST_LINK_SENT';
   entityType?: 'User' | 'Job' | 'Application' | 'Resume' | 'Notification';
   entityId?: mongoose.Types.ObjectId;
   details?: Record<string, any>;
@@ -60,6 +61,7 @@ const activityLogSchema = new Schema<IActivityLog>(
         'PROFILE_UPDATE',
         'AVATAR_UPDATE',
         'PASSWORD_CHANGE',
+        'TEST_LINK_SENT',
       ],
     },
     entityType: {

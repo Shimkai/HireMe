@@ -1,29 +1,37 @@
 import { Router } from 'express';
-import * as recommendationController from '../controllers/recommendation.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { authorizeRoles } from '../middleware/roleCheck.middleware';
+import {
+  getRecommendedStudents,
+  shortlistStudent,
+  placeStudent,
+} from '../controllers/recommendation.controller';
 
 const router = Router();
 
-// Get job recommendations for a specific student (for TnP/Admin)
-router.get('/student/:studentId', 
-  authenticate, 
-  authorizeRoles('TnP', 'Admin'), 
-  recommendationController.getJobRecommendations
+// Get recommended students for a job
+router.get(
+  '/job/:jobId',
+  authenticate,
+  authorizeRoles('Recruiter', 'TnP'),
+  getRecommendedStudents
 );
 
-// Get job recommendations for the current user (for students)
-router.get('/my-recommendations', 
-  authenticate, 
-  authorizeRoles('Student'), 
-  recommendationController.getMyJobRecommendations
+// Shortlist a student
+router.post(
+  '/shortlist',
+  authenticate,
+  authorizeRoles('Recruiter', 'TnP'),
+  shortlistStudent
 );
 
-// Get bulk recommendations for multiple students (for analytics)
-router.post('/bulk', 
-  authenticate, 
-  authorizeRoles('TnP', 'Admin'), 
-  recommendationController.getBulkRecommendations
+// Place a student
+router.post(
+  '/place',
+  authenticate,
+  authorizeRoles('Recruiter', 'TnP'),
+  placeStudent
 );
 
 export default router;
+

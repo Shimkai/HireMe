@@ -2,15 +2,38 @@ import { Container, Grid, Card, CardContent, Typography, Button, Box } from '@mu
 import { People, Work, CheckCircle } from '@mui/icons-material';
 import MainLayout from '../../components/layout/MainLayout';
 import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import api from '../../utils/api';
 
 const TnPDashboard = () => {
   const navigate = useNavigate();
-
-  const stats = [
+  const [stats, setStats] = useState([
     { title: 'Total Students', value: '0', icon: <People fontSize="large" />, color: '#8B5CF6' },
     { title: 'Active Jobs', value: '0', icon: <Work fontSize="large" />, color: '#10B981' },
     { title: 'Pending Approvals', value: '0', icon: <CheckCircle fontSize="large" />, color: '#F59E0B' },
-  ];
+  ]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStatistics = async () => {
+      try {
+        const response = await api.get('/users/tnp/statistics');
+        const data = response.data.data;
+        
+        setStats([
+          { title: 'Total Students', value: data.totalStudents?.toString() || '0', icon: <People fontSize="large" />, color: '#8B5CF6' },
+          { title: 'Active Jobs', value: data.activeJobs?.toString() || '0', icon: <Work fontSize="large" />, color: '#10B981' },
+          { title: 'Pending Approvals', value: data.pendingApprovals?.toString() || '0', icon: <CheckCircle fontSize="large" />, color: '#F59E0B' },
+        ]);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching statistics:', error);
+        setLoading(false);
+      }
+    };
+
+    fetchStatistics();
+  }, []);
 
   return (
     <MainLayout>

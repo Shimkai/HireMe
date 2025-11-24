@@ -1,7 +1,6 @@
 import { Container, Grid, Card, CardContent, Typography, Button, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, IconButton, TextField, InputAdornment, Dialog, DialogTitle, DialogContent, DialogActions, Alert, CircularProgress, DialogContentText } from '@mui/material';
 import { Search, Work, LocationOn, Business, Send, Visibility, AttachFile, Warning } from '@mui/icons-material';
 import MainLayout from '../../components/layout/MainLayout';
-import RecommendedJobs from '../../components/RecommendedJobs';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { jobService } from '../../services/jobService';
@@ -23,9 +22,11 @@ const JobsPage = () => {
   const [applyError, setApplyError] = useState('');
   const [applySuccess, setApplySuccess] = useState('');
   const [verificationDialogOpen, setVerificationDialogOpen] = useState(false);
+  const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchJobs();
+    fetchMyApplications();
   }, []);
 
   const fetchJobs = async () => {
@@ -37,6 +38,19 @@ const JobsPage = () => {
       setError(err.response?.data?.error?.message || 'Failed to fetch jobs');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchMyApplications = async () => {
+    try {
+      if (user?.role === 'Student') {
+        const response = await applicationService.getMyApplications({ limit: 100 });
+        const jobIds = new Set(response.data.map((app: any) => app.jobId._id));
+        setAppliedJobIds(jobIds);
+      }
+    } catch (err) {
+      // Silently fail if we can't fetch applications
+      console.error('Failed to fetch applications:', err);
     }
   };
 
@@ -81,12 +95,30 @@ const JobsPage = () => {
       setApplySuccess('Application submitted successfully!');
       setApplyDialogOpen(false);
       setResumeFile(null);
-      setSelectedJob(null);
+      
+      // Mark job as applied
+      setAppliedJobIds(prev => new Set([...prev, selectedJob._id]));
+      
+      // Clear selected job after a short delay
+      setTimeout(() => {
+        setSelectedJob(null);
+      }, 100);
       
       // Refresh jobs to update application count
       fetchJobs();
     } catch (err: any) {
-      setApplyError(err.response?.data?.error?.message || 'Failed to submit application');
+      // Handle "already applied" case
+      if (err.response?.status === 409) {
+        setAppliedJobIds(prev => new Set([...prev, selectedJob!._id]));
+        setApplySuccess('You have already applied to this job');
+        setApplyDialogOpen(false);
+        setResumeFile(null);
+        setTimeout(() => {
+          setSelectedJob(null);
+        }, 100);
+      } else {
+        setApplyError(err.response?.data?.error?.message || 'Failed to submit application');
+      }
     } finally {
       setApplying(false);
     }
@@ -204,9 +236,6 @@ const JobsPage = () => {
           </Grid>
         </Grid>
 
-        {/* Recommended Jobs Section */}
-        <RecommendedJobs limit={6} onJobClick={handleJobClick} />
-
         <Card sx={{ mb: 3 }}>
           <CardContent>
             <TextField
@@ -287,16 +316,27 @@ const JobsPage = () => {
                 </CardContent>
                 
                 <Box sx={{ p: 2, pt: 0 }}>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    startIcon={<Send />}
-                    sx={{ mb: 1 }}
-                    onClick={() => handleApplyClick(job)}
-                    disabled={!job.isActive || new Date(job.applicationDeadline) < new Date()}
-                  >
-                    Apply Now
-                  </Button>
+                  {appliedJobIds.has(job._id) ? (
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      disabled
+                      sx={{ mb: 1 }}
+                    >
+                      Already Applied
+                    </Button>
+                  ) : (
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      startIcon={<Send />}
+                      sx={{ mb: 1 }}
+                      onClick={() => handleApplyClick(job)}
+                      disabled={!job.isActive || new Date(job.applicationDeadline) < new Date()}
+                    >
+                      Apply Now
+                    </Button>
+                  )}
                   <Button
                     fullWidth
                     variant="outlined"

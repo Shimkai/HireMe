@@ -127,10 +127,8 @@ const JobDetails: React.FC = () => {
 
     try {
       setApplying(true);
-      const formData = new FormData();
-      formData.append('resume', resumeFile);
 
-      await applicationService.applyToJob(job._id, formData);
+      await applicationService.applyToJob(job._id, resumeFile);
       
       // Close dialog and reset form
       setApplyDialogOpen(false);

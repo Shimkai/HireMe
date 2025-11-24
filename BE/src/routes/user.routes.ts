@@ -10,6 +10,7 @@ const router = Router();
 
 router.get('/me', authenticate, userController.getProfile);
 router.put('/me', authenticate, validate(updateProfileSchema), userController.updateProfile);
+router.get('/recruiter/statistics', authenticate, authorizeRoles('Recruiter'), userController.getRecruiterStatistics);
 router.put('/me/avatar', authenticate, upload.single('avatar'), userController.updateAvatar);
 router.post('/upload-tenth-marksheet', authenticate, upload.single('marksheet'), userController.uploadTenthMarksheet);
 router.post('/upload-twelfth-marksheet', authenticate, upload.single('marksheet'), userController.uploadTwelfthMarksheet);
@@ -20,6 +21,7 @@ router.post('/upload-resume', authenticate, upload.single('resume'), userControl
 router.get('/students', authenticate, authorizeRoles('TnP'), userController.getStudents);
 router.put('/students/:id/verify', authenticate, authorizeRoles('TnP'), validate(verifyStudentSchema), userController.verifyStudent);
 router.delete('/students/:id', authenticate, authorizeRoles('TnP'), userController.deleteStudent);
+router.get('/tnp/statistics', authenticate, authorizeRoles('TnP'), userController.getTnPStatistics);
 
 export default router;
 

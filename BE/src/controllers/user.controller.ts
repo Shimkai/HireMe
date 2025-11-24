@@ -7,6 +7,8 @@ import User from '../models/User.model';
 import { sanitizeUser, getPaginationParams, calculatePagination } from '../utils/helpers';
 import ActivityLog from '../models/ActivityLog.model';
 import { NotificationService } from '../services/notification.service';
+import Job from '../models/Job.model';
+import Application from '../models/Application.model';
 
 export const getProfile = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
@@ -556,5 +558,92 @@ export const deleteStudent = asyncHandler(async (req: Request, res: Response) =>
   await student.save();
 
   ApiSuccess.send(res, null, 'Student account deactivated successfully');
+});
+
+export const getTnPStatistics = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user || req.user.role !== 'TnP') {
+    throw ApiError.forbidden('Access denied');
+  }
+
+  const tnpUser = await User.findById(req.user.id);
+  if (!tnpUser) {
+    throw ApiError.notFound('User not found');
+  }
+
+  const collegeId = tnpUser.tnpDetails?.college;
+
+  // Total Students: Count students from the same college
+  const totalStudents = await User.countDocuments({
+    role: 'Student',
+    'studentDetails.college': collegeId,
+  });
+
+  // Active Jobs: Count approved jobs
+  const activeJobs = await Job.countDocuments({
+    status: 'Approved',
+    isActive: true,
+  });
+
+  // Pending Approvals: Count pending jobs
+  const pendingApprovals = await Job.countDocuments({
+    status: 'Pending',
+  });
+
+  ApiSuccess.send(
+    res,
+    {
+      totalStudents,
+      activeJobs,
+      pendingApprovals,
+    },
+    'Statistics fetched successfully'
+  );
+});
+
+export const getRecruiterStatistics = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user || req.user.role !== 'Recruiter') {
+    throw ApiError.forbidden('Access denied');
+  }
+
+  const recruiterId = req.user.id;
+
+  // Get all jobs posted by this recruiter
+  const recruiterJobs = await Job.find({ postedBy: recruiterId }).select('_id');
+  const jobIds = recruiterJobs.map(job => job._id);
+
+  // Active Jobs: Count approved and active jobs posted by this recruiter
+  const activeJobs = await Job.countDocuments({
+    postedBy: recruiterId,
+    status: 'Approved',
+    isActive: true,
+  });
+
+  // Total Applications: Count all applications to recruiter's jobs
+  const totalApplications = await Application.countDocuments({
+    jobId: { $in: jobIds },
+  });
+
+  // Interviews Scheduled: Count applications with status 'Interview Scheduled'
+  const interviewsScheduled = await Application.countDocuments({
+    jobId: { $in: jobIds },
+    status: 'Interview Scheduled',
+  });
+
+  // Hired Candidates: Count applications with status 'Accepted' or 'Offered'
+  const hiredCandidates = await Application.countDocuments({
+    jobId: { $in: jobIds },
+    status: { $in: ['Accepted', 'Offered'] },
+  });
+
+  ApiSuccess.send(
+    res,
+    {
+      activeJobs,
+      totalApplications,
+      interviewsScheduled,
+      hiredCandidates,
+    },
+    'Statistics fetched successfully'
+  );
 });
 

@@ -20,6 +20,7 @@ import {
 import { authService } from '../../services/authService';
 import { setCredentials } from '../../features/auth/authSlice';
 import { collegeService, College } from '../../services/collegeService';
+import { PREDEFINED_SKILLS } from '../../constants/skills';
 
 // Predefined list of courses for student registration
 const PREDEFINED_COURSES = [
@@ -313,14 +314,7 @@ const Register = () => {
               <Autocomplete
                 multiple
                 fullWidth
-                options={[
-                  'JavaScript', 'Python', 'Java', 'C++', 'React', 'Node.js', 'Angular', 'Vue.js',
-                  'MongoDB', 'PostgreSQL', 'MySQL', 'Redis', 'Docker', 'Kubernetes', 'AWS',
-                  'Azure', 'GCP', 'Machine Learning', 'Data Science', 'Artificial Intelligence',
-                  'Blockchain', 'DevOps', 'CI/CD', 'Git', 'Linux', 'TypeScript', 'Express.js',
-                  'Spring Boot', 'Django', 'Flask', 'TensorFlow', 'PyTorch', 'Pandas', 'NumPy',
-                  'SQL', 'NoSQL', 'REST API', 'GraphQL', 'Microservices', 'Agile', 'Scrum'
-                ]}
+                options={PREDEFINED_SKILLS}
                 value={formData.studentDetails.skills}
                 onChange={(_, value) => {
                   setFormData(prev => ({

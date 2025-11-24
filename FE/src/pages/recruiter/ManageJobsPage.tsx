@@ -1,15 +1,15 @@
 import { Container, Grid, Card, CardContent, Typography, Button, Box, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Alert, CircularProgress, TextField, FormControl, InputLabel, Select, MenuItem, Avatar, List, ListItem, ListItemText, ListItemAvatar, Divider, Collapse } from '@mui/material';
-import { Edit, Delete, Visibility, Work, LocationOn, Business, Psychology, ExpandMore, ExpandLess, Assignment } from '@mui/icons-material';
+import { Edit, Delete, Visibility, Work, LocationOn, Business, ExpandMore, ExpandLess, Assignment, PersonSearch } from '@mui/icons-material';
 import MainLayout from '../../components/layout/MainLayout';
 import { useState, useEffect } from 'react';
 import { jobService } from '../../services/jobService';
 import { applicationService } from '../../services/applicationService';
 import { Job, Application, User } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
-import RecommendedStudents from '../../components/recruiter/RecommendedStudents';
 import StudentDetailsModal from '../../components/common/StudentDetailsModal';
 import SkillsMultiSelect from '../../components/common/SkillsMultiSelect';
 import TestLinkDialog from '../../components/recruiter/TestLinkDialog';
+import RecommendedStudents from '../../components/recruiter/RecommendedStudents';
 
 const ManageJobsPage = () => {
   const { user } = useAuth();
@@ -22,12 +22,14 @@ const ManageJobsPage = () => {
   const [processing, setProcessing] = useState(false);
   const [actionError, setActionError] = useState('');
   const [showError, setShowError] = useState(false);
-  const [recommendationsDialog, setRecommendationsDialog] = useState(false);
-  const [selectedJobForRecommendations, setSelectedJobForRecommendations] = useState<string | null>(null);
   
   // Test link dialog
   const [testLinkDialogOpen, setTestLinkDialogOpen] = useState(false);
   const [selectedJobForTestLink, setSelectedJobForTestLink] = useState<Job | null>(null);
+  
+  // Recommendation dialog
+  const [recommendationsDialogOpen, setRecommendationsDialogOpen] = useState(false);
+  const [selectedJobForRecommendations, setSelectedJobForRecommendations] = useState<string>('');
   
   // Applications and student details modal
   const [applications, setApplications] = useState<{ [jobId: string]: Application[] }>({});
@@ -201,16 +203,6 @@ const ManageJobsPage = () => {
     setActionError('');
   };
 
-  const handleViewRecommendations = (jobId: string) => {
-    setSelectedJobForRecommendations(jobId);
-    setRecommendationsDialog(true);
-  };
-
-  const handleCloseRecommendations = () => {
-    setRecommendationsDialog(false);
-    setSelectedJobForRecommendations(null);
-  };
-
   const handleOpenTestLinkDialog = (job: Job) => {
     setSelectedJobForTestLink(job);
     setTestLinkDialogOpen(true);
@@ -219,6 +211,16 @@ const ManageJobsPage = () => {
   const handleCloseTestLinkDialog = () => {
     setTestLinkDialogOpen(false);
     setSelectedJobForTestLink(null);
+  };
+
+  const handleOpenRecommendations = (jobId: string) => {
+    setSelectedJobForRecommendations(jobId);
+    setRecommendationsDialogOpen(true);
+  };
+
+  const handleCloseRecommendations = () => {
+    setRecommendationsDialogOpen(false);
+    setSelectedJobForRecommendations('');
   };
 
   const handleSendTestLink = async (testLink: string, target: 'all' | 'shortlisted') => {
@@ -427,15 +429,16 @@ const ManageJobsPage = () => {
                                 <Assignment />
                               </IconButton>
                             )}
-                            <IconButton 
-                              size="small" 
-                              color="secondary"
-                              onClick={() => handleViewRecommendations(job._id)}
-                              title="View Recommended Students"
-                              disabled={job.status !== 'Approved'}
-                            >
-                              <Psychology />
-                            </IconButton>
+                            {job.status === 'Approved' && (
+                              <IconButton
+                                size="small"
+                                color="secondary"
+                                onClick={() => handleOpenRecommendations(job._id)}
+                                title="View Recommended Students"
+                              >
+                                <PersonSearch />
+                              </IconButton>
+                            )}
                             <IconButton 
                               size="small" 
                               color="primary"
@@ -757,15 +760,6 @@ const ManageJobsPage = () => {
           </DialogActions>
         </Dialog>
 
-        {/* Recommended Students Dialog */}
-        {selectedJobForRecommendations && (
-          <RecommendedStudents
-            jobId={selectedJobForRecommendations}
-            open={recommendationsDialog}
-            onClose={handleCloseRecommendations}
-          />
-        )}
-
         {/* Student Details Modal */}
         <StudentDetailsModal
           open={studentDetailsModalOpen}
@@ -790,6 +784,15 @@ const ManageJobsPage = () => {
             applicationCount={selectedJobForTestLink.applicationCount}
             shortlistedCount={applications[selectedJobForTestLink._id]?.filter(app => app.status === 'Shortlisted').length || 0}
             onSend={handleSendTestLink}
+          />
+        )}
+
+        {/* Recommended Students Dialog */}
+        {selectedJobForRecommendations && (
+          <RecommendedStudents
+            jobId={selectedJobForRecommendations}
+            open={recommendationsDialogOpen}
+            onClose={handleCloseRecommendations}
           />
         )}
       </Container>

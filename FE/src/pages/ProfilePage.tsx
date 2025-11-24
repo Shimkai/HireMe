@@ -55,6 +55,7 @@ import { collegeService, College } from '../services/collegeService';
 import { userService } from '../services/userService';
 import { getImageUrl } from '../utils/imageUtils';
 import api from '../utils/api';
+import { PREDEFINED_SKILLS } from '../constants/skills';
 
 // Predefined list of courses for student profile
 const PREDEFINED_COURSES = [
@@ -1046,39 +1047,7 @@ const ProfilePage = () => {
                   <Divider sx={{ mb: 2 }} />
                   <Autocomplete
                     multiple
-                    options={[
-                      // Professional areas
-                      'Backend Development',
-                      'Frontend Development', 
-                      'Full-Stack Development',
-                      'Mobile Development',
-                      'Data Science',
-                      'Machine Learning',
-                      'Artificial Intelligence',
-                      'DevOps',
-                      'Cloud Computing',
-                      'Cybersecurity',
-                      'Testing/QA',
-                      'UI/UX Design',
-                      'Database Administration',
-                      'System Administration',
-                      'Network Engineering',
-                      'Software Architecture',
-                      'Product Management',
-                      'Business Analysis',
-                      'Digital Marketing',
-                      'Content Writing',
-                      'Graphic Design',
-                      'Video Editing',
-                      'Photography',
-                      'Other',
-                      // Technical skills
-                      'JavaScript', 'Python', 'Java', 'C++', 'React', 'Angular', 'Vue.js', 'Node.js',
-                      'MongoDB', 'MySQL', 'PostgreSQL', 'Redis', 'Docker', 'Kubernetes', 'AWS',
-                      'Azure', 'GCP', 'CI/CD', 'Git', 'Linux', 'TypeScript', 'Express.js',
-                      'Spring Boot', 'Django', 'Flask', 'TensorFlow', 'PyTorch', 'Pandas', 'NumPy',
-                      'SQL', 'NoSQL', 'REST API', 'GraphQL', 'Microservices', 'Agile', 'Scrum'
-                    ]}
+                    options={PREDEFINED_SKILLS}
                     value={formData.skills}
                     onChange={handleSkillsChange}
                     disabled={!isEditing}
