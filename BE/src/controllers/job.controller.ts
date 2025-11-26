@@ -3,12 +3,15 @@ import { Request, Response } from 'express';
 import { asyncHandler } from '../utils/asyncHandler';
 import { ApiSuccess } from '../utils/apiResponse';
 import { ApiError } from '../utils/apiError';
+import mongoose from 'mongoose';
 import Job from '../models/Job.model';
 import Application from '../models/Application.model';
 import User from '../models/User.model';
 import { getPaginationParams, calculatePagination } from '../utils/helpers';
 import ActivityLog from '../models/ActivityLog.model';
 import { NotificationService } from '../services/notification.service';
+import { getApplicationsForExport } from '../services/job.service';
+import { generateApplicationsExcel } from '../utils/excelExporter';
 
 export const createJob = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user || req.user.role !== 'Recruiter') {
@@ -78,7 +81,7 @@ export const getAllJobs = asyncHandler(async (req: Request, res: Response) => {
     filter.applicationDeadline = { $gte: new Date() };
   } else if (req.user.role === 'Recruiter') {
     // Recruiters see only their own jobs
-    filter.postedBy = req.user.id;
+    filter.postedBy = new mongoose.Types.ObjectId(req.user.id);
   } else if (req.user.role === 'TnP') {
     // TnP sees all jobs (no additional filters)
     // They can see pending, approved, and rejected jobs
@@ -131,7 +134,7 @@ export const getJobById = asyncHandler(async (req: Request, res: Response) => {
     throw ApiError.forbidden('This job is not available');
   }
 
-  if (req.user.role === 'Recruiter' && job.postedBy.toString() !== req.user.id) {
+  if (req.user.role === 'Recruiter' && (job.postedBy as any).toString() !== req.user.id) {
     throw ApiError.forbidden('You can only view your own jobs');
   }
 
@@ -149,7 +152,7 @@ export const updateJob = asyncHandler(async (req: Request, res: Response) => {
     throw ApiError.notFound('Job not found');
   }
 
-  if (job.postedBy.toString() !== req.user.id) {
+  if ((job.postedBy as any).toString() !== req.user.id) {
     throw ApiError.forbidden('You can only update your own jobs');
   }
 
@@ -185,7 +188,7 @@ export const deleteJob = asyncHandler(async (req: Request, res: Response) => {
   }
 
   // Check permissions
-  if (req.user.role === 'Recruiter' && job.postedBy.toString() !== req.user.id) {
+  if (req.user.role === 'Recruiter' && (job.postedBy as any).toString() !== req.user.id) {
     throw ApiError.forbidden('You can only delete your own jobs');
   }
 
@@ -222,12 +225,13 @@ export const approveJob = asyncHandler(async (req: Request, res: Response) => {
     throw ApiError.notFound('Job not found');
   }
 
-  if (job.status !== 'Pending') {
-    throw ApiError.badRequest('Only pending jobs can be approved');
+  if (!['Pending', 'Rejected'].includes(job.status)) {
+    throw ApiError.badRequest('Only pending or rejected jobs can be approved');
   }
 
   job.status = 'Approved';
   job.approvedBy = req.user.id as any;
+  job.rejectionReason = undefined;
   await job.save();
 
   // Log activity
@@ -258,12 +262,13 @@ export const rejectJob = asyncHandler(async (req: Request, res: Response) => {
     throw ApiError.notFound('Job not found');
   }
 
-  if (job.status !== 'Pending') {
-    throw ApiError.badRequest('Only pending jobs can be rejected');
+  if (!['Pending', 'Approved'].includes(job.status)) {
+    throw ApiError.badRequest('Only pending or approved jobs can be rejected');
   }
 
   job.status = 'Rejected';
   job.rejectionReason = req.body.rejectionReason;
+  job.approvedBy = undefined;
   await job.save();
 
   // Log activity
@@ -285,5 +290,66 @@ export const rejectJob = asyncHandler(async (req: Request, res: Response) => {
   );
 
   ApiSuccess.send(res, job, 'Job rejected');
+});
+
+export const exportJobApplications = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user || req.user.role !== 'Recruiter') {
+    throw ApiError.forbidden('Only recruiters can export applications');
+  }
+
+  const { jobId } = req.params;
+  const statusFilter = (req.query.status as string) || 'all';
+
+  // Verify job exists and belongs to the recruiter
+  const job = await Job.findById(jobId);
+  if (!job) {
+    throw ApiError.notFound('Job not found');
+  }
+
+  if ((job.postedBy as any).toString() !== req.user.id) {
+    throw ApiError.forbidden('You can only export applications for your own jobs');
+  }
+
+  // Get applications data
+  const applications = await getApplicationsForExport(jobId, statusFilter);
+
+  if (applications.length === 0) {
+    throw ApiError.notFound('No applications found for the specified criteria');
+  }
+
+  // Set response headers
+  const filename = `${job.title.replace(/[^a-z0-9]/gi, '_')}_applications_${Date.now()}.xlsx`;
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+  // Generate and stream Excel file
+  const excelStream = await generateApplicationsExcel(
+    applications,
+    job.title,
+    job.companyName
+  );
+
+  // Handle stream errors
+  excelStream.on('error', () => {
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, message: 'Error generating Excel file' });
+    }
+  });
+
+  // Pipe the Excel file to response
+  excelStream.pipe(res);
+
+  // Log activity (non-blocking)
+  ActivityLog.create({
+    userId: req.user.id,
+    action: 'JOB_EXPORT',
+    entityType: 'Job',
+    entityId: job._id,
+    details: { statusFilter, applicationCount: applications.length },
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  }).catch((error) => {
+    console.error('Failed to log export activity:', error);
+  });
 });
 

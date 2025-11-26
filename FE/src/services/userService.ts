@@ -23,6 +23,14 @@ export const userService = {
     };
   },
 
+  exportStudents: async (params?: any): Promise<any> => {
+    const response = await api.get('/users/students/export', {
+      params,
+      responseType: 'blob',
+    });
+    return response;
+  },
+
   verifyStudent: async (studentId: string, isVerified: boolean, reason?: string): Promise<User> => {
     const response = await api.put<UserResponse>(`/users/students/${studentId}/verify`, {
       isVerified,

@@ -19,6 +19,7 @@ router.post('/upload-resume', authenticate, upload.single('resume'), userControl
 
 // TnP routes
 router.get('/students', authenticate, authorizeRoles('TnP'), userController.getStudents);
+router.get('/students/export', authenticate, authorizeRoles('TnP'), userController.exportStudents);
 router.put('/students/:id/verify', authenticate, authorizeRoles('TnP'), validate(verifyStudentSchema), userController.verifyStudent);
 router.delete('/students/:id', authenticate, authorizeRoles('TnP'), userController.deleteStudent);
 router.get('/tnp/statistics', authenticate, authorizeRoles('TnP'), userController.getTnPStatistics);

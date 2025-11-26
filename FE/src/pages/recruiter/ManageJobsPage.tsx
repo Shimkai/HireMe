@@ -1,5 +1,5 @@
-import { Container, Grid, Card, CardContent, Typography, Button, Box, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Alert, CircularProgress, TextField, FormControl, InputLabel, Select, MenuItem, Avatar, List, ListItem, ListItemText, ListItemAvatar, Divider, Collapse } from '@mui/material';
-import { Edit, Delete, Visibility, Work, LocationOn, Business, ExpandMore, ExpandLess, Assignment, PersonSearch } from '@mui/icons-material';
+import { Container, Grid, Card, CardContent, Typography, Button, Box, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Alert, CircularProgress, TextField, FormControl, InputLabel, Select, MenuItem, Avatar, List, ListItem, ListItemText, ListItemAvatar, Paper, Stack, FormLabel, RadioGroup, FormControlLabel, Radio } from '@mui/material';
+import { Edit, Delete, Visibility, Work, LocationOn, Business, Assignment, PersonSearch, AttachMoney, Schedule, School, Info, People, Download } from '@mui/icons-material';
 import MainLayout from '../../components/layout/MainLayout';
 import { useState, useEffect } from 'react';
 import { jobService } from '../../services/jobService';
@@ -10,6 +10,8 @@ import StudentDetailsModal from '../../components/common/StudentDetailsModal';
 import SkillsMultiSelect from '../../components/common/SkillsMultiSelect';
 import TestLinkDialog from '../../components/recruiter/TestLinkDialog';
 import RecommendedStudents from '../../components/recruiter/RecommendedStudents';
+
+type ExportFilter = 'all' | 'shortlisted' | 'placed' | 'others';
 
 const ManageJobsPage = () => {
   const { user } = useAuth();
@@ -33,11 +35,25 @@ const ManageJobsPage = () => {
   
   // Applications and student details modal
   const [applications, setApplications] = useState<{ [jobId: string]: Application[] }>({});
-  const [expandedJobs, setExpandedJobs] = useState<{ [jobId: string]: boolean }>({});
   const [applicationsLoading, setApplicationsLoading] = useState<{ [jobId: string]: boolean }>({});
   const [studentDetailsModalOpen, setStudentDetailsModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<User | null>(null);
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
+
+  // Export dialog state
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [selectedJobForExport, setSelectedJobForExport] = useState<Job | null>(null);
+  const [exportStatusFilter, setExportStatusFilter] = useState<ExportFilter>('all');
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState('');
+  
+  // Job details dialog
+  const [jobDetailsDialogOpen, setJobDetailsDialogOpen] = useState(false);
+  const [selectedJobForDetails, setSelectedJobForDetails] = useState<Job | null>(null);
+  
+  // Applicants popup dialog
+  const [applicantsDialogOpen, setApplicantsDialogOpen] = useState(false);
+  const [selectedJobForApplicants, setSelectedJobForApplicants] = useState<Job | null>(null);
 
   // Edit form data
   const [editFormData, setEditFormData] = useState({
@@ -92,14 +108,29 @@ const ManageJobsPage = () => {
     }
   };
 
-  const handleToggleApplications = (jobId: string) => {
-    const isExpanded = expandedJobs[jobId];
-    setExpandedJobs(prev => ({ ...prev, [jobId]: !isExpanded }));
+  const handleViewJobDetails = (job: Job) => {
+    setSelectedJobForDetails(job);
+    setJobDetailsDialogOpen(true);
+  };
+
+  const handleCloseJobDetails = () => {
+    setJobDetailsDialogOpen(false);
+    setSelectedJobForDetails(null);
+  };
+
+  const handleViewApplicants = async (job: Job) => {
+    setSelectedJobForApplicants(job);
+    setApplicantsDialogOpen(true);
     
     // Fetch applications if not already loaded
-    if (!isExpanded && !applications[jobId]) {
-      fetchJobApplications(jobId);
+    if (!applications[job._id]) {
+      await fetchJobApplications(job._id);
     }
+  };
+
+  const handleCloseApplicantsDialog = () => {
+    setApplicantsDialogOpen(false);
+    setSelectedJobForApplicants(null);
   };
 
   const handleViewStudentDetails = (application: Application) => {
@@ -113,6 +144,61 @@ const ManageJobsPage = () => {
     setStudentDetailsModalOpen(false);
     setSelectedStudent(null);
     setSelectedApplication(null);
+  };
+
+  const handleOpenExportDialog = (job: Job) => {
+    setSelectedJobForExport(job);
+    setExportStatusFilter('all');
+    setExportError('');
+    setExportDialogOpen(true);
+  };
+
+  const handleCloseExportDialog = () => {
+    if (exporting) return;
+    setExportDialogOpen(false);
+    setSelectedJobForExport(null);
+    setExportStatusFilter('all');
+    setExportError('');
+  };
+
+  const handleExportApplicants = async () => {
+    if (!selectedJobForExport) return;
+    try {
+      setExporting(true);
+      setExportError('');
+
+      const response = await jobService.exportJobApplications(selectedJobForExport._id, exportStatusFilter);
+
+      const contentType =
+        response.headers?.['content-type'] ||
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+      const blob = new Blob([response.data], { type: contentType });
+      const url = window.URL.createObjectURL(blob);
+
+      let filename = `${selectedJobForExport.title.replace(/[^a-z0-9]/gi, '_')}_applications.xlsx`;
+      const disposition = response.headers?.['content-disposition'];
+      if (disposition) {
+        const match = disposition.match(/filename="?(.+)"?/);
+        if (match && match[1]) {
+          filename = match[1];
+        }
+      }
+
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      handleCloseExportDialog();
+    } catch (err: any) {
+      setExportError(err.response?.data?.error?.message || 'Failed to export applicants. Please try again.');
+    } finally {
+      setExporting(false);
+    }
   };
 
   const handleEdit = (job: Job) => {
@@ -403,22 +489,38 @@ const ManageJobsPage = () => {
                           }
                         </Typography>
                         
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography variant="body2" color="textSecondary">
-                              {job.applicationCount} applications
-                            </Typography>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, gap: 2, flexWrap: 'wrap' }}>
+                          <Typography variant="body2" color="textSecondary">
+                            {job.applicationCount} applications
+                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 1 }}>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<Download fontSize="small" />}
+                              onClick={() => handleOpenExportDialog(job)}
+                              disabled={job.applicationCount === 0}
+                            >
+                              Export Excel
+                            </Button>
+                            <IconButton 
+                              size="small" 
+                              color="primary"
+                              onClick={() => handleViewJobDetails(job)}
+                              title="View Job Details"
+                            >
+                              <Info />
+                            </IconButton>
                             {job.applicationCount > 0 && (
                               <IconButton
                                 size="small"
-                                onClick={() => handleToggleApplications(job._id)}
-                                title={expandedJobs[job._id] ? 'Hide applications' : 'Show applications'}
+                                color="primary"
+                                onClick={() => handleViewApplicants(job)}
+                                title="View Applicants"
                               >
-                                {expandedJobs[job._id] ? <ExpandLess /> : <ExpandMore />}
+                                <People />
                               </IconButton>
                             )}
-                          </Box>
-                          <Box>
                             {job.status === 'Approved' && job.applicationCount > 0 && (
                               <IconButton 
                                 size="small" 
@@ -458,85 +560,6 @@ const ManageJobsPage = () => {
                           </Box>
                         </Box>
 
-                        {/* Applications List */}
-                        <Collapse in={expandedJobs[job._id]}>
-                          <Box sx={{ mt: 2 }}>
-                            <Divider sx={{ mb: 2 }} />
-                            <Typography variant="subtitle2" gutterBottom color="primary">
-                              Student Applications
-                            </Typography>
-                            
-                            {applicationsLoading[job._id] ? (
-                              <Box display="flex" justifyContent="center" p={2}>
-                                <CircularProgress size={24} />
-                              </Box>
-                            ) : applications[job._id] && applications[job._id].length > 0 ? (
-                              <List dense>
-                                {applications[job._id].map((application) => {
-                                  const student = application.studentId as User;
-                                  return (
-                                    <ListItem
-                                      key={application._id}
-                                      sx={{
-                                        border: 1,
-                                        borderColor: 'divider',
-                                        borderRadius: 1,
-                                        mb: 1,
-                                        backgroundColor: 'grey.50'
-                                      }}
-                                    >
-                                      <ListItemAvatar>
-                                        <Avatar
-                                          src={student.profileAvatar ? `http://localhost:5000${student.profileAvatar}` : undefined}
-                                          sx={{ width: 32, height: 32 }}
-                                        >
-                                          {student.fullName?.charAt(0) || 'U'}
-                                        </Avatar>
-                                      </ListItemAvatar>
-                                      <ListItemText
-                                        primary={
-                                          <Box display="flex" alignItems="center" gap={1}>
-                                            <Typography variant="body2" fontWeight="medium">
-                                              {student.fullName}
-                                            </Typography>
-                                            <Chip
-                                              label={application.status}
-                                              color={getStatusColor(application.status) as any}
-                                              size="small"
-                                            />
-                                          </Box>
-                                        }
-                                        secondary={
-                                          <Box>
-                                            <Typography variant="caption" color="text.secondary">
-                                              {student.email}
-                                            </Typography>
-                                            <br />
-                                            <Typography variant="caption" color="text.secondary">
-                                              Applied: {new Date(application.appliedAt).toLocaleDateString()}
-                                            </Typography>
-                                          </Box>
-                                        }
-                                      />
-                                      <IconButton
-                                        size="small"
-                                        color="primary"
-                                        onClick={() => handleViewStudentDetails(application)}
-                                        title="View Student Details"
-                                      >
-                                        <Visibility />
-                                      </IconButton>
-                                    </ListItem>
-                                  );
-                                })}
-                              </List>
-                            ) : (
-                              <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', textAlign: 'center', py: 2 }}>
-                                No applications found for this job.
-                              </Typography>
-                            )}
-                          </Box>
-                        </Collapse>
                       </CardContent>
                     </Card>
                   </Grid>
@@ -760,6 +783,63 @@ const ManageJobsPage = () => {
           </DialogActions>
         </Dialog>
 
+        {/* Export Applicants Dialog */}
+        {selectedJobForExport && (
+          <Dialog open={exportDialogOpen} onClose={handleCloseExportDialog} maxWidth="sm" fullWidth>
+            <DialogTitle>Export Applicants for {selectedJobForExport.title}</DialogTitle>
+            <DialogContent>
+              {exportError && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {exportError}
+                </Alert>
+              )}
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Choose which applicants you want to include in the Excel file.
+              </Typography>
+              <FormControl component="fieldset" fullWidth>
+                <FormLabel component="legend">Applicant Group</FormLabel>
+                <RadioGroup
+                  value={exportStatusFilter}
+                  onChange={(e) => setExportStatusFilter(e.target.value as ExportFilter)}
+                >
+                  <FormControlLabel
+                    value="all"
+                    control={<Radio />}
+                    label="All applied students"
+                  />
+                  <FormControlLabel
+                    value="shortlisted"
+                    control={<Radio />}
+                    label="Shortlisted students"
+                  />
+                  <FormControlLabel
+                    value="placed"
+                    control={<Radio />}
+                    label="Placed students"
+                  />
+                  <FormControlLabel
+                    value="others"
+                    control={<Radio />}
+                    label="Not yet shortlisted or placed"
+                  />
+                </RadioGroup>
+              </FormControl>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleCloseExportDialog} disabled={exporting}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleExportApplicants}
+                variant="contained"
+                disabled={exporting}
+              >
+                {exporting ? <CircularProgress size={20} /> : 'Download Excel'}
+              </Button>
+            </DialogActions>
+          </Dialog>
+        )}
+
         {/* Student Details Modal */}
         <StudentDetailsModal
           open={studentDetailsModalOpen}
@@ -795,6 +875,340 @@ const ManageJobsPage = () => {
             onClose={handleCloseRecommendations}
           />
         )}
+
+        {/* Job Details Dialog */}
+        <Dialog
+          open={jobDetailsDialogOpen}
+          onClose={handleCloseJobDetails}
+          maxWidth="md"
+          fullWidth
+          PaperProps={{
+            sx: { maxHeight: '90vh' }
+          }}
+        >
+          <DialogTitle>
+            <Box display="flex" alignItems="center" gap={2}>
+              <Work color="primary" />
+              <Typography variant="h6">
+                {selectedJobForDetails?.title}
+              </Typography>
+            </Box>
+          </DialogTitle>
+          <DialogContent dividers>
+            {selectedJobForDetails && (
+              <Box>
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={6}>
+                    <Paper sx={{ p: 2, mb: 2 }}>
+                      <Typography variant="h6" gutterBottom color="primary">
+                        Job Information
+                      </Typography>
+                      <Stack spacing={1.5}>
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">
+                            Company Name
+                          </Typography>
+                          <Typography variant="body1" fontWeight="medium">
+                            {selectedJobForDetails.companyName}
+                          </Typography>
+                        </Box>
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">
+                            Designation
+                          </Typography>
+                          <Typography variant="body1" fontWeight="medium">
+                            {selectedJobForDetails.designation}
+                          </Typography>
+                        </Box>
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <LocationOn fontSize="small" color="action" />
+                          <Typography variant="body2">
+                            {selectedJobForDetails.location}
+                          </Typography>
+                        </Box>
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <Business fontSize="small" color="action" />
+                          <Typography variant="body2">
+                            {selectedJobForDetails.jobType}
+                          </Typography>
+                        </Box>
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <AttachMoney fontSize="small" color="action" />
+                          <Typography variant="body2">
+                            ₹{selectedJobForDetails.ctc.min}L - ₹{selectedJobForDetails.ctc.max}L {selectedJobForDetails.ctc.currency}
+                          </Typography>
+                        </Box>
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <Work fontSize="small" color="action" />
+                          <Typography variant="body2">
+                            {selectedJobForDetails.experienceRequired}
+                          </Typography>
+                        </Box>
+                        {selectedJobForDetails.workMode && (
+                          <Box>
+                            <Typography variant="caption" color="text.secondary">
+                              Work Mode
+                            </Typography>
+                            <Typography variant="body2">
+                              {selectedJobForDetails.workMode}
+                            </Typography>
+                          </Box>
+                        )}
+                        {selectedJobForDetails.jobCategory && (
+                          <Box>
+                            <Typography variant="caption" color="text.secondary">
+                              Job Category
+                            </Typography>
+                            <Typography variant="body2">
+                              {selectedJobForDetails.jobCategory}
+                            </Typography>
+                          </Box>
+                        )}
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <Schedule fontSize="small" color="action" />
+                          <Typography variant="body2">
+                            Deadline: {new Date(selectedJobForDetails.applicationDeadline).toLocaleDateString()}
+                          </Typography>
+                        </Box>
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">
+                            Status
+                          </Typography>
+                          <Box mt={0.5}>
+                            <Chip
+                              label={selectedJobForDetails.status}
+                              color={getStatusColor(selectedJobForDetails.status) as any}
+                              size="small"
+                            />
+                          </Box>
+                        </Box>
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">
+                            Applications Received
+                          </Typography>
+                          <Typography variant="body1" fontWeight="medium">
+                            {selectedJobForDetails.applicationCount}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Paper sx={{ p: 2, mb: 2 }}>
+                      <Typography variant="h6" gutterBottom color="primary">
+                        Eligibility Criteria
+                      </Typography>
+                      <Stack spacing={1.5}>
+                        {selectedJobForDetails.eligibility.minCGPA && (
+                          <Box>
+                            <Typography variant="caption" color="text.secondary">
+                              Minimum CGPA
+                            </Typography>
+                            <Typography variant="body2">
+                              {selectedJobForDetails.eligibility.minCGPA}
+                            </Typography>
+                          </Box>
+                        )}
+                        {selectedJobForDetails.eligibility.allowedCourses && selectedJobForDetails.eligibility.allowedCourses.length > 0 && (
+                          <Box>
+                            <Typography variant="caption" color="text.secondary">
+                              Allowed Courses
+                            </Typography>
+                            <Box display="flex" flexWrap="wrap" gap={0.5} mt={0.5}>
+                              {selectedJobForDetails.eligibility.allowedCourses.map((course, index) => (
+                                <Chip key={index} label={course} size="small" variant="outlined" />
+                              ))}
+                            </Box>
+                          </Box>
+                        )}
+                        {selectedJobForDetails.eligibility.maxBacklogs !== undefined && (
+                          <Box>
+                            <Typography variant="caption" color="text.secondary">
+                              Maximum Backlogs
+                            </Typography>
+                            <Typography variant="body2">
+                              {selectedJobForDetails.eligibility.maxBacklogs}
+                            </Typography>
+                          </Box>
+                        )}
+                        {selectedJobForDetails.eligibility.yearOfCompletion && selectedJobForDetails.eligibility.yearOfCompletion.length > 0 && (
+                          <Box>
+                            <Typography variant="caption" color="text.secondary">
+                              Year of Completion
+                            </Typography>
+                            <Box display="flex" flexWrap="wrap" gap={0.5} mt={0.5}>
+                              {selectedJobForDetails.eligibility.yearOfCompletion.map((year, index) => (
+                                <Chip key={index} label={year} size="small" variant="outlined" />
+                              ))}
+                            </Box>
+                          </Box>
+                        )}
+                      </Stack>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Paper sx={{ p: 2 }}>
+                      <Typography variant="h6" gutterBottom color="primary">
+                        Job Description
+                      </Typography>
+                      <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                        {selectedJobForDetails.description}
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                  {selectedJobForDetails.skillsRequired && selectedJobForDetails.skillsRequired.length > 0 && (
+                    <Grid item xs={12}>
+                      <Paper sx={{ p: 2 }}>
+                        <Typography variant="h6" gutterBottom color="primary">
+                          Required Skills
+                        </Typography>
+                        <Box display="flex" flexWrap="wrap" gap={1} mt={1}>
+                          {selectedJobForDetails.skillsRequired.map((skill, index) => (
+                            <Chip key={index} label={skill} color="primary" variant="outlined" />
+                          ))}
+                        </Box>
+                      </Paper>
+                    </Grid>
+                  )}
+                </Grid>
+              </Box>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseJobDetails}>Close</Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Applicants Popup Dialog */}
+        <Dialog
+          open={applicantsDialogOpen}
+          onClose={handleCloseApplicantsDialog}
+          maxWidth="md"
+          fullWidth
+          PaperProps={{
+            sx: { maxHeight: '90vh' }
+          }}
+        >
+          <DialogTitle>
+            <Box display="flex" alignItems="center" justifyContent="space-between">
+              <Box display="flex" alignItems="center" gap={2}>
+                <PersonSearch color="primary" />
+                <Typography variant="h6">
+                  Applicants for {selectedJobForApplicants?.title}
+                </Typography>
+              </Box>
+              <Chip
+                label={`${selectedJobForApplicants?.applicationCount || 0} applications`}
+                color="primary"
+                size="small"
+              />
+            </Box>
+          </DialogTitle>
+          <DialogContent dividers>
+            {selectedJobForApplicants && (
+              <Box>
+                {applicationsLoading[selectedJobForApplicants._id] ? (
+                  <Box display="flex" justifyContent="center" alignItems="center" p={4}>
+                    <CircularProgress />
+                  </Box>
+                ) : applications[selectedJobForApplicants._id] && applications[selectedJobForApplicants._id].length > 0 ? (
+                  <List>
+                    {applications[selectedJobForApplicants._id].map((application) => {
+                      const student = application.studentId as User;
+                      return (
+                        <ListItem
+                          key={application._id}
+                          sx={{
+                            border: 1,
+                            borderColor: 'divider',
+                            borderRadius: 2,
+                            mb: 2,
+                            backgroundColor: 'grey.50',
+                            '&:hover': {
+                              backgroundColor: 'grey.100',
+                            }
+                          }}
+                        >
+                          <ListItemAvatar>
+                            <Avatar
+                              src={student.profileAvatar ? `http://localhost:5000${student.profileAvatar}` : undefined}
+                              sx={{ width: 48, height: 48 }}
+                            >
+                              {student.fullName?.charAt(0) || 'U'}
+                            </Avatar>
+                          </ListItemAvatar>
+                          <ListItemText
+                            primary={
+                              <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
+                                <Typography variant="subtitle1" fontWeight="medium">
+                                  {student.fullName}
+                                </Typography>
+                                <Chip
+                                  label={application.status}
+                                  color={getStatusColor(application.status) as any}
+                                  size="small"
+                                />
+                              </Box>
+                            }
+                            secondary={
+                              <Box mt={0.5}>
+                                <Typography variant="body2" color="text.secondary">
+                                  {student.email}
+                                </Typography>
+                                {student.mobileNumber && (
+                                  <Typography variant="body2" color="text.secondary">
+                                    {student.mobileNumber}
+                                  </Typography>
+                                )}
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                                  Applied: {new Date(application.appliedAt).toLocaleDateString()} at {new Date(application.appliedAt).toLocaleTimeString()}
+                                </Typography>
+                                {student.studentDetails && (
+                                  <Box mt={1}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                      <School fontSize="small" />
+                                      {student.studentDetails.courseName}
+                                      {typeof student.studentDetails.college === 'object' && student.studentDetails.college.name && (
+                                        <> • {student.studentDetails.college.name}</>
+                                      )}
+                                    </Typography>
+                                  </Box>
+                                )}
+                              </Box>
+                            }
+                          />
+                          <IconButton
+                            color="primary"
+                            onClick={() => {
+                              handleViewStudentDetails(application);
+                              handleCloseApplicantsDialog();
+                            }}
+                            title="View Student Details"
+                            sx={{ ml: 1 }}
+                          >
+                            <Visibility />
+                          </IconButton>
+                        </ListItem>
+                      );
+                    })}
+                  </List>
+                ) : (
+                  <Box textAlign="center" p={4}>
+                    <Typography variant="body1" color="text.secondary" gutterBottom>
+                      No applications found for this job.
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Applications will appear here once students apply.
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseApplicantsDialog}>Close</Button>
+          </DialogActions>
+        </Dialog>
       </Container>
     </MainLayout>
   );

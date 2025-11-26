@@ -1,7 +1,7 @@
 import { Container, Grid, Card, CardContent, Typography, Button, Box, TextField, FormControl, InputLabel, Select, MenuItem, Chip, Alert } from '@mui/material';
 import { Add, Save, Cancel, Work, LocationOn, Business } from '@mui/icons-material';
 import MainLayout from '../../components/layout/MainLayout';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { jobService } from '../../services/jobService';
 import { useAuth } from '../../hooks/useAuth';
 import SkillsMultiSelect from '../../components/common/SkillsMultiSelect';
@@ -12,7 +12,7 @@ const PostJobPage = () => {
     title: '',
     companyName: '',
     location: '',
-    ctc: { min: 0, max: 0, currency: 'INR' },
+    ctc: { min: '' as number | string, max: '' as number | string, currency: 'INR' },
     jobType: '',
     experienceRequired: '',
     description: '',
@@ -22,14 +22,24 @@ const PostJobPage = () => {
     jobCategory: '',
     workMode: 'Work from Office',
     eligibility: {
-      minCGPA: 0,
+      minCGPA: '' as number | string,
       allowedCourses: [] as string[],
-      maxBacklogs: 0,
+      maxBacklogs: '' as number | string,
       yearOfCompletion: [] as number[],
-      minTenthPercentage: 0,
-      minTwelfthPercentage: 0
+      minTenthPercentage: '' as number | string,
+      minTwelfthPercentage: '' as number | string
     }
   });
+
+  // Set company name from user profile on mount
+  useEffect(() => {
+    if (user?.recruiterDetails?.companyName) {
+      setFormData(prev => ({
+        ...prev,
+        companyName: user.recruiterDetails.companyName
+      }));
+    }
+  }, [user]);
 
   const [newSkill, setNewSkill] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -71,9 +81,9 @@ const PostJobPage = () => {
       // Reset form
       setFormData({
         title: '',
-        companyName: '',
+        companyName: user?.recruiterDetails?.companyName || '',
         location: '',
-        ctc: { min: 0, max: 0, currency: 'INR' },
+        ctc: { min: '' as number | string, max: '' as number | string, currency: 'INR' },
         jobType: '',
         experienceRequired: '',
         description: '',
@@ -83,10 +93,12 @@ const PostJobPage = () => {
         jobCategory: '',
         workMode: 'Work from Office',
         eligibility: {
-          minCGPA: 0,
+          minCGPA: '' as number | string,
           allowedCourses: [],
-          maxBacklogs: 0,
-          yearOfCompletion: []
+          maxBacklogs: '' as number | string,
+          yearOfCompletion: [],
+          minTenthPercentage: '' as number | string,
+          minTwelfthPercentage: '' as number | string
         }
       });
     } catch (err: any) {
@@ -166,7 +178,7 @@ const PostJobPage = () => {
                     value={formData.ctc.min}
                     onChange={(e) => setFormData(prev => ({
                       ...prev,
-                      ctc: { ...prev.ctc, min: parseFloat(e.target.value) || 0 }
+                      ctc: { ...prev.ctc, min: e.target.value === '' ? '' : parseFloat(e.target.value) }
                     }))}
                     required
                     placeholder="e.g., 8"
@@ -180,7 +192,7 @@ const PostJobPage = () => {
                     value={formData.ctc.max}
                     onChange={(e) => setFormData(prev => ({
                       ...prev,
-                      ctc: { ...prev.ctc, max: parseFloat(e.target.value) || 0 }
+                      ctc: { ...prev.ctc, max: e.target.value === '' ? '' : parseFloat(e.target.value) }
                     }))}
                     required
                     placeholder="e.g., 12"
@@ -302,7 +314,7 @@ const PostJobPage = () => {
                     value={formData.eligibility.minCGPA}
                     onChange={(e) => setFormData(prev => ({
                       ...prev,
-                      eligibility: { ...prev.eligibility, minCGPA: parseFloat(e.target.value) || 0 }
+                      eligibility: { ...prev.eligibility, minCGPA: e.target.value === '' ? '' : parseFloat(e.target.value) }
                     }))}
                     inputProps={{ min: 0, max: 10, step: 0.1 }}
                     placeholder="e.g., 7.0"
@@ -317,7 +329,7 @@ const PostJobPage = () => {
                     value={formData.eligibility.minTenthPercentage}
                     onChange={(e) => setFormData(prev => ({
                       ...prev,
-                      eligibility: { ...prev.eligibility, minTenthPercentage: parseFloat(e.target.value) || 0 }
+                      eligibility: { ...prev.eligibility, minTenthPercentage: e.target.value === '' ? '' : parseFloat(e.target.value) }
                     }))}
                     inputProps={{ min: 0, max: 100, step: 0.01 }}
                     placeholder="e.g., 60"
@@ -332,7 +344,7 @@ const PostJobPage = () => {
                     value={formData.eligibility.minTwelfthPercentage}
                     onChange={(e) => setFormData(prev => ({
                       ...prev,
-                      eligibility: { ...prev.eligibility, minTwelfthPercentage: parseFloat(e.target.value) || 0 }
+                      eligibility: { ...prev.eligibility, minTwelfthPercentage: e.target.value === '' ? '' : parseFloat(e.target.value) }
                     }))}
                     inputProps={{ min: 0, max: 100, step: 0.01 }}
                     placeholder="e.g., 60"
@@ -347,7 +359,7 @@ const PostJobPage = () => {
                     value={formData.eligibility.maxBacklogs}
                     onChange={(e) => setFormData(prev => ({
                       ...prev,
-                      eligibility: { ...prev.eligibility, maxBacklogs: parseInt(e.target.value) || 0 }
+                      eligibility: { ...prev.eligibility, maxBacklogs: e.target.value === '' ? '' : parseInt(e.target.value) }
                     }))}
                     inputProps={{ min: 0 }}
                     placeholder="e.g., 0"

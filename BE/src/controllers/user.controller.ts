@@ -4,11 +4,12 @@ import { asyncHandler } from '../utils/asyncHandler';
 import { ApiSuccess } from '../utils/apiResponse';
 import { ApiError } from '../utils/apiError';
 import User from '../models/User.model';
-import { sanitizeUser, getPaginationParams, calculatePagination } from '../utils/helpers';
+import { sanitizeUser, calculatePagination } from '../utils/helpers';
 import ActivityLog from '../models/ActivityLog.model';
 import { NotificationService } from '../services/notification.service';
 import Job from '../models/Job.model';
 import Application from '../models/Application.model';
+import { generateStudentsExcel } from '../utils/excelExporter';
 
 export const getProfile = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
@@ -438,7 +439,6 @@ export const getStudents = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const collegeId = tnpUser.tnpDetails?.college;
-  const { page, limit, skip } = getPaginationParams(req.query.page as string, req.query.limit as string);
 
   // Build filter
   const filter: any = {
@@ -465,17 +465,131 @@ export const getStudents = asyncHandler(async (req: Request, res: Response) => {
     filter['studentDetails.placementStatus'] = req.query.placement;
   }
 
-  const total = await User.countDocuments(filter);
+  // Fetch full list of students for this college (no pagination limit)
   const students = await User.find(filter)
     .populate('studentDetails.college')
-    .skip(skip)
-    .limit(limit)
     .sort({ createdAt: -1 });
 
+  const total = students.length;
   const sanitized = students.map((s) => sanitizeUser(s));
-  const pagination = calculatePagination(total, page, limit);
+
+  // Keep pagination shape for compatibility, but represent the full list
+  const pagination = calculatePagination(total, 1, total || 1);
 
   ApiSuccess.sendWithPagination(res, sanitized, pagination, 'Students fetched successfully');
+});
+
+export const exportStudents = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user || req.user.role !== 'TnP') {
+    throw ApiError.forbidden('Access denied');
+  }
+
+  const tnpUser = await User.findById(req.user.id);
+  if (!tnpUser) {
+    throw ApiError.notFound('User not found');
+  }
+
+  const collegeId = tnpUser.tnpDetails?.college;
+
+  // Base filter: all students of this college
+  const filter: any = {
+    role: 'Student',
+    'studentDetails.college': collegeId,
+  };
+
+  if (req.query.search) {
+    filter.$or = [
+      { fullName: { $regex: req.query.search, $options: 'i' } },
+      { email: { $regex: req.query.search, $options: 'i' } },
+    ];
+  }
+
+  if (req.query.course) {
+    filter['studentDetails.courseName'] = req.query.course;
+  }
+
+  if (req.query.verified !== undefined && req.query.verified !== '') {
+    filter['studentDetails.isVerified'] = req.query.verified === 'true';
+  }
+
+  if (req.query.placement) {
+    filter['studentDetails.placementStatus'] = req.query.placement;
+  }
+
+  // Export-specific filters
+  const exportFilterType = (req.query.exportFilterType as string) || 'all';
+  const exportVerification = req.query.exportVerification as string | undefined;
+  const exportPlacement = req.query.exportPlacement as string | undefined;
+  const exportCourses =
+    typeof req.query.exportCourses === 'string'
+      ? (req.query.exportCourses as string).split(',').filter(Boolean)
+      : undefined;
+
+  if (exportFilterType === 'verification' && exportVerification) {
+    filter['studentDetails.isVerified'] = exportVerification === 'Verified';
+  } else if (exportFilterType === 'placement' && exportPlacement) {
+    filter['studentDetails.placementStatus'] = exportPlacement;
+  } else if (exportFilterType === 'course' && exportCourses && exportCourses.length > 0) {
+    filter['studentDetails.courseName'] = { $in: exportCourses };
+  }
+
+  const students = await User.find(filter).populate('studentDetails.college').sort({ createdAt: -1 });
+
+  const includeAcademic = req.query.exportWithAcademic === 'true';
+  const includeSkills = req.query.exportIncludeSkills === 'true';
+
+  const rows = students.map((student) => {
+    const s: any = student;
+    const details: any = s.studentDetails || {};
+    const college =
+      typeof details.college === 'object' && details.college
+        ? details.college.name
+        : details.college || 'N/A';
+
+    const placementStatus = details.placementStatus || 'Not Placed';
+    const companyName =
+      placementStatus === 'Placed' ? (details.placementCompany || 'Not specified') : '';
+
+    const row: any = {
+      id: details.registrationNumber || s._id.toString(),
+      name: s.fullName || 'N/A',
+      email: s.email || 'N/A',
+      branch: details.courseName || 'N/A',
+      college,
+      verificationStatus: details.isVerified ? 'Verified' : 'Unverified',
+      placementStatus,
+      companyName,
+    };
+
+    if (includeAcademic) {
+      row.graduationYear = details.yearOfCompletion ?? null;
+      row.cgpa = details.cgpa ?? null;
+      row.tenthPercentage = details.tenthMarks?.percentage ?? null;
+      row.twelfthPercentage = details.twelfthMarks?.percentage ?? null;
+    }
+
+    if (includeSkills) {
+      row.skills = Array.isArray(details.skills) ? details.skills.join(', ') : '';
+    }
+
+    return row;
+  });
+
+  const stream = await generateStudentsExcel(rows, {
+    includeAcademic,
+    includeSkills,
+  });
+
+  const timestamp = new Date().toISOString().split('T')[0];
+  const filename = `student-records-${timestamp}.xlsx`;
+
+  res.setHeader(
+    'Content-Type',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  );
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+  stream.pipe(res);
 });
 
 export const verifyStudent = asyncHandler(async (req: Request, res: Response) => {

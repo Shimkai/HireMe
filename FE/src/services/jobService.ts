@@ -4,7 +4,19 @@ import { Job } from '../types';
 export const jobService = {
   getAllJobs: async (params?: any): Promise<{ data: Job[]; pagination: any }> => {
     const response = await api.get('/jobs', { params });
-    return response.data;
+    // Backend returns { success: true, data: [...], pagination: {...} }
+    return {
+      data: response.data.data || [],
+      pagination: response.data.pagination || {}
+    };
+  },
+
+  exportJobApplications: async (jobId: string, status: string = 'all') => {
+    const response = await api.get(`/jobs/${jobId}/applications/export`, {
+      params: { status },
+      responseType: 'blob',
+    });
+    return response;
   },
 
   getJobById: async (id: string): Promise<Job> => {

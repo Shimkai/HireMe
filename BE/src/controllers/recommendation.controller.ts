@@ -31,6 +31,11 @@ export const getRecommendedStudents = asyncHandler(async (req: Request, res: Res
     throw ApiError.forbidden('You can only view recommendations for your own jobs');
   }
 
+  // Only show recommendations for approved jobs
+  if (job.status !== 'Approved') {
+    throw ApiError.badRequest('Recommendations are only available for approved jobs');
+  }
+
   try {
     // Get all students who have applied to this job
     const applications = await Application.find({ jobId: jobId }).select('studentId');
@@ -179,6 +184,11 @@ export const shortlistStudent = asyncHandler(async (req: Request, res: Response)
     throw ApiError.forbidden('You can only shortlist students for your own jobs');
   }
 
+  // Only allow actions on approved jobs
+  if (job.status !== 'Approved') {
+    throw ApiError.badRequest('This action is only available for approved jobs');
+  }
+
   // Create or update application status
   const Application = require('../models/Application.model').default;
   
@@ -239,6 +249,11 @@ export const placeStudent = asyncHandler(async (req: Request, res: Response) => 
   
   if (job.postedBy.toString() !== req.user.id) {
     throw ApiError.forbidden('You can only place students for your own jobs');
+  }
+
+  // Only allow actions on approved jobs
+  if (job.status !== 'Approved') {
+    throw ApiError.badRequest('This action is only available for approved jobs');
   }
 
   const Application = require('../models/Application.model').default;

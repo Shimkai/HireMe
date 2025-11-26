@@ -1,5 +1,6 @@
 /// <reference path="../types/express.d.ts" />
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import { asyncHandler } from '../utils/asyncHandler';
 import { ApiSuccess } from '../utils/apiResponse';
 import { ApiError } from '../utils/apiError';
@@ -243,7 +244,7 @@ export const getMyJobApplications = asyncHandler(async (req: Request, res: Respo
   const { page, limit, skip } = getPaginationParams(req.query.page as string, req.query.limit as string);
 
   // Get all jobs posted by this recruiter
-  const jobs = await Job.find({ postedBy: req.user.id });
+    const jobs = await Job.find({ postedBy: new mongoose.Types.ObjectId(req.user.id) });
   const jobIds = jobs.map(job => job._id);
 
   if (jobIds.length === 0) {
@@ -323,7 +324,7 @@ export const getRecruiterApplications = asyncHandler(async (req: Request, res: R
   const query: any = {};
   
   // Get jobs posted by this recruiter
-  const recruiterJobs = await Job.find({ postedBy: req.user.id }).select('_id');
+    const recruiterJobs = await Job.find({ postedBy: new mongoose.Types.ObjectId(req.user.id) }).select('_id');
   const jobIds = recruiterJobs.map(job => job._id);
   
   if (jobIds.length === 0) {

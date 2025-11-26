@@ -20,14 +20,12 @@ import {
   TableHead,
   TableRow,
   TablePagination,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Stack,
   Card,
   CardContent,
   Grid,
+  ToggleButtonGroup,
+  ToggleButton,
 } from '@mui/material';
 import {
   Work,
@@ -39,6 +37,12 @@ import {
 import { jobService } from '../../services/jobService';
 import { format } from 'date-fns';
 import { Job } from '../../types';
+
+const statusOptions = [
+  { value: 'Pending', label: 'Jobs waiting approval' },
+  { value: 'Approved', label: 'Approved jobs' },
+  { value: 'Rejected', label: 'Rejected jobs' },
+];
 
 const ApproveJobs: React.FC = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -168,25 +172,32 @@ const ApproveJobs: React.FC = () => {
 
       {/* Filters */}
       <Paper sx={{ p: 2, mb: 3 }}>
-        <Stack direction="row" spacing={2} alignItems="center">
-          <FilterList color="action" />
-          <FormControl sx={{ minWidth: 200 }}>
-            <InputLabel>Filter by Status</InputLabel>
-            <Select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, alignItems: { md: 'center' } }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <FilterList color="action" />
+            <Typography variant="subtitle2" color="text.secondary">
+              Sort by status
+            </Typography>
+          </Box>
+          <ToggleButtonGroup
+            exclusive
+            value={statusFilter}
+            onChange={(_event, value) => {
+              if (value) {
+                setStatusFilter(value);
                 setPage(0);
-              }}
-              label="Filter by Status"
-            >
-              <MenuItem value="">All Jobs</MenuItem>
-              <MenuItem value="Pending">Pending</MenuItem>
-              <MenuItem value="Approved">Approved</MenuItem>
-              <MenuItem value="Rejected">Rejected</MenuItem>
-            </Select>
-          </FormControl>
-        </Stack>
+              }
+            }}
+            size="small"
+            sx={{ flexWrap: 'wrap' }}
+          >
+            {statusOptions.map((option) => (
+              <ToggleButton key={option.value} value={option.value}>
+                {option.label}
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
+        </Box>
       </Paper>
 
       {/* Jobs Table */}
@@ -281,8 +292,7 @@ const ApproveJobs: React.FC = () => {
                         >
                           <Visibility />
                         </IconButton>
-                        {job.status === 'Pending' && (
-                          <>
+                        {(job.status === 'Pending' || job.status === 'Rejected') && (
                             <IconButton
                               size="small"
                               onClick={() => {
@@ -294,6 +304,8 @@ const ApproveJobs: React.FC = () => {
                             >
                               <CheckCircle />
                             </IconButton>
+                        )}
+                        {(job.status === 'Pending' || job.status === 'Approved') && (
                             <IconButton
                               size="small"
                               onClick={() => {
@@ -305,7 +317,6 @@ const ApproveJobs: React.FC = () => {
                             >
                               <Cancel />
                             </IconButton>
-                          </>
                         )}
                       </Box>
                     </TableCell>
@@ -390,28 +401,30 @@ const ApproveJobs: React.FC = () => {
                     {selectedJob.description}
                   </Typography>
                 </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Required Skills
-                  </Typography>
-                  <Box display="flex" flexWrap="wrap" gap={1}>
-                    {selectedJob.skillsRequired.map((skill, index) => (
-                      <Chip key={index} label={skill} size="small" />
-                    ))}
-                  </Box>
-                </Grid>
+                {selectedJob.skillsRequired && selectedJob.skillsRequired.length > 0 && (
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Required Skills
+                    </Typography>
+                    <Box display="flex" flexWrap="wrap" gap={1}>
+                      {selectedJob.skillsRequired.map((skill, index) => (
+                        <Chip key={index} label={skill} size="small" />
+                      ))}
+                    </Box>
+                  </Grid>
+                )}
                 <Grid item xs={12} md={6}>
                   <Typography variant="subtitle2" gutterBottom>
                     Eligibility Criteria
                   </Typography>
                   <Typography variant="body2">
-                    <strong>Min CGPA:</strong> {selectedJob.eligibility.minCGPA || 'Not specified'}
+                    <strong>Min CGPA:</strong> {selectedJob.eligibility?.minCGPA ?? 'Not specified'}
                   </Typography>
                   <Typography variant="body2">
-                    <strong>Max Backlogs:</strong> {selectedJob.eligibility.maxBacklogs || 'Not specified'}
+                    <strong>Max Backlogs:</strong> {selectedJob.eligibility?.maxBacklogs ?? 'Not specified'}
                   </Typography>
                   <Typography variant="body2">
-                    <strong>Allowed Courses:</strong> {selectedJob.eligibility.allowedCourses?.join(', ') || 'All courses'}
+                    <strong>Allowed Courses:</strong> {selectedJob.eligibility?.allowedCourses?.length ? selectedJob.eligibility.allowedCourses.join(', ') : 'All courses'}
                   </Typography>
                   <Typography variant="body2">
                     <strong>Experience Required:</strong> {selectedJob.experienceRequired || 'Not specified'}
@@ -448,8 +461,7 @@ const ApproveJobs: React.FC = () => {
               }}>
                 Close
               </Button>
-              {selectedJob.status === 'Pending' && (
-                <>
+              {(selectedJob.status === 'Pending' || selectedJob.status === 'Rejected') && (
                   <Button
                     onClick={() => {
                       setJobDetailsDialogOpen(false);
@@ -460,6 +472,8 @@ const ApproveJobs: React.FC = () => {
                   >
                     Approve Job
                   </Button>
+              )}
+              {(selectedJob.status === 'Pending' || selectedJob.status === 'Approved') && (
                   <Button
                     onClick={() => {
                       setJobDetailsDialogOpen(false);
@@ -470,7 +484,6 @@ const ApproveJobs: React.FC = () => {
                   >
                     Reject Job
                   </Button>
-                </>
               )}
             </DialogActions>
           </>

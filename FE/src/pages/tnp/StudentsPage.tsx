@@ -1,4 +1,4 @@
-import { Container, Grid, Card, CardContent, Typography, Button, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Alert, CircularProgress, TextField, FormControl, InputLabel, Select, MenuItem, Avatar } from '@mui/material';
+import { Container, Grid, Card, CardContent, Typography, Button, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Alert, CircularProgress, TextField, FormControl, InputLabel, Select, MenuItem, Avatar, Stack, Checkbox, FormControlLabel } from '@mui/material';
 import { Add, Edit, Delete, Visibility, CheckCircle, Cancel, Close, Download, Description, PictureAsPdf } from '@mui/icons-material';
 import MainLayout from '../../components/layout/MainLayout';
 import { useState, useEffect } from 'react';
@@ -20,6 +20,13 @@ const StudentsPage = () => {
   const [actionError, setActionError] = useState('');
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [viewingStudent, setViewingStudent] = useState<User | null>(null);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportFilterType, setExportFilterType] = useState<'all' | 'verification' | 'course' | 'placement'>('all');
+  const [exportVerificationValue, setExportVerificationValue] = useState<'Verified' | 'Unverified'>('Verified');
+  const [exportPlacementValue, setExportPlacementValue] = useState<'Placed' | 'Not Placed' | 'Shortlisted'>('Placed');
+  const [exportCourseValues, setExportCourseValues] = useState<string[]>([]);
+  const [exportWithAcademic, setExportWithAcademic] = useState(false);
+  const [exportIncludeSkills, setExportIncludeSkills] = useState(false);
 
   useEffect(() => {
     fetchStudents();
@@ -127,16 +134,88 @@ const StudentsPage = () => {
     setActionError('');
   };
 
+  const courseOptions = [
+    'Computer Science',
+    'Information Technology',
+    'Artificial Intelligence',
+    'AIML',
+    'Data Science',
+    'Cyber Security',
+    'ENTC',
+    'Civil Engineering',
+    'Mechanical Engineering',
+    'Electronics Engineering',
+    'Robotics',
+    'Automation',
+    'Electrical Engineering',
+    'Chemical Engineering',
+    'Biomedical Engineering',
+  ];
+
+  const handleExport = async () => {
+    try {
+      const params: any = {
+        exportFilterType,
+        exportWithAcademic: exportWithAcademic ? 'true' : 'false',
+        exportIncludeSkills: exportIncludeSkills ? 'true' : 'false',
+      };
+
+      if (exportFilterType === 'verification') {
+        params.exportVerification = exportVerificationValue;
+      } else if (exportFilterType === 'placement') {
+        params.exportPlacement = exportPlacementValue;
+      } else if (exportFilterType === 'course' && exportCourseValues.length > 0) {
+        params.exportCourses = exportCourseValues.join(',');
+      }
+
+      // Also send current filters so backend matches table view
+      if (searchTerm) params.search = searchTerm;
+      if (courseFilter) params.course = courseFilter;
+      if (verifiedFilter !== '') params.verified = verifiedFilter;
+      if (placementFilter) params.placement = placementFilter;
+
+      const response = await userService.exportStudents(params);
+
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `student-records-${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      setExportDialogOpen(false);
+    } catch (error: any) {
+      console.error('Failed to export students:', error);
+      alert(error.response?.data?.error?.message || 'Failed to export student records.');
+    }
+  };
+
   return (
     <MainLayout>
       <Container maxWidth="lg">
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h4" gutterBottom>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: { xs: 'flex-start', md: 'center' },
+            flexDirection: { xs: 'column', md: 'row' },
+            gap: 2,
+            mb: 3,
+          }}
+        >
+          <Typography variant="h4" gutterBottom sx={{ flexGrow: 1 }}>
             Manage Students
           </Typography>
-          <Button variant="contained" startIcon={<Add />}>
-            Add Student
-          </Button>
+          <Stack direction="row" spacing={2}>
+            <Button variant="contained" color="secondary" startIcon={<Download />} onClick={() => setExportDialogOpen(true)}>
+              Export Records
+            </Button>
+          </Stack>
         </Box>
 
         {error && (
@@ -167,10 +246,11 @@ const StudentsPage = () => {
                     label="Course"
                   >
                     <MenuItem value="">All Courses</MenuItem>
-                    <MenuItem value="Computer Science">Computer Science</MenuItem>
-                    <MenuItem value="Information Technology">Information Technology</MenuItem>
-                    <MenuItem value="Electronics">Electronics</MenuItem>
-                    <MenuItem value="Mechanical">Mechanical</MenuItem>
+                    {courseOptions.map((course) => (
+                      <MenuItem key={course} value={course}>
+                        {course}
+                      </MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
               </Grid>
@@ -751,6 +831,105 @@ const StudentsPage = () => {
           <DialogActions>
             <Button onClick={() => setProfileDialogOpen(false)}>
               Close
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Export Dialog */}
+        <Dialog open={exportDialogOpen} onClose={() => setExportDialogOpen(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>Export Student Records</DialogTitle>
+          <DialogContent dividers>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Choose a filter to export students who match the selected criteria.
+            </Typography>
+            <Stack spacing={2}>
+              <FormControl fullWidth>
+                <InputLabel>Filter Type</InputLabel>
+                <Select
+                  value={exportFilterType}
+                  label="Filter Type"
+                  onChange={(e) => setExportFilterType(e.target.value as typeof exportFilterType)}
+                >
+                  <MenuItem value="all">All Students</MenuItem>
+                  <MenuItem value="verification">Verification Status</MenuItem>
+                  <MenuItem value="course">Course</MenuItem>
+                  <MenuItem value="placement">Placement Status</MenuItem>
+                </Select>
+              </FormControl>
+
+              {exportFilterType === 'verification' && (
+                <FormControl fullWidth>
+                  <InputLabel>Verification Status</InputLabel>
+                  <Select
+                    value={exportVerificationValue}
+                    label="Verification Status"
+                    onChange={(e) => setExportVerificationValue(e.target.value as typeof exportVerificationValue)}
+                  >
+                    <MenuItem value="Verified">Verified</MenuItem>
+                    <MenuItem value="Unverified">Unverified</MenuItem>
+                  </Select>
+                </FormControl>
+              )}
+
+              {exportFilterType === 'placement' && (
+                <FormControl fullWidth>
+                  <InputLabel>Placement Status</InputLabel>
+                  <Select
+                    value={exportPlacementValue}
+                    label="Placement Status"
+                    onChange={(e) => setExportPlacementValue(e.target.value as typeof exportPlacementValue)}
+                  >
+                    <MenuItem value="Placed">Placed</MenuItem>
+                    <MenuItem value="Not Placed">Not Placed</MenuItem>
+                    <MenuItem value="Shortlisted">Shortlisted</MenuItem>
+                  </Select>
+                </FormControl>
+              )}
+
+              {exportFilterType === 'course' && (
+                <FormControl fullWidth>
+                  <InputLabel>Courses</InputLabel>
+                  <Select
+                    multiple
+                    value={exportCourseValues}
+                    label="Courses"
+                    onChange={(e) => setExportCourseValues(e.target.value as string[])}
+                    renderValue={(selected) => (selected as string[]).join(', ')}
+                  >
+                    {courseOptions.map((course) => (
+                      <MenuItem key={course} value={course}>
+                        <Checkbox checked={exportCourseValues.indexOf(course) > -1} />
+                        <Typography variant="body2">{course}</Typography>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={exportWithAcademic}
+                    onChange={(e) => setExportWithAcademic(e.target.checked)}
+                  />
+                }
+                label="Export with academic details"
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={exportIncludeSkills}
+                    onChange={(e) => setExportIncludeSkills(e.target.checked)}
+                  />
+                }
+                label="Include skills"
+              />
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setExportDialogOpen(false)}>Cancel</Button>
+            <Button variant="contained" startIcon={<Download />} onClick={handleExport}>
+              Download Excel
             </Button>
           </DialogActions>
         </Dialog>

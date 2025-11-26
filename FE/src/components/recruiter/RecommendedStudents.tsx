@@ -94,7 +94,7 @@ const RecommendedStudents: React.FC<RecommendedStudentsProps> = ({ jobId, open, 
     setError('');
     
     try {
-      const response = await api.get(`/recommendations/job/${jobId}?top_k=30`);
+      const response = await api.get(`/recommendations/${jobId}?top_k=30`);
       console.log('Full recommendation response:', response);
       console.log('Recommendation data:', response.data);
       
@@ -119,6 +119,13 @@ const RecommendedStudents: React.FC<RecommendedStudentsProps> = ({ jobId, open, 
     } catch (err: any) {
       console.error('Error fetching recommendations:', err);
       console.error('Error response:', err.response);
+      
+      // Handle specific error for rejected jobs
+      if (err.response?.status === 400 && err.response?.data?.error?.message?.includes('approved')) {
+        setError('Recommendations are only available for approved jobs. This job may have been rejected.');
+      } else {
+        setError(err.response?.data?.error?.message || 'Failed to fetch recommendations. Please try again.');
+      }
       setError(err.response?.data?.message || err.response?.data?.error?.message || 'Failed to fetch recommendations');
     } finally {
       setLoading(false);

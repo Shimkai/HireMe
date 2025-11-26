@@ -24,6 +24,9 @@
 - `DELETE /jobs/:id` - Delete job
 - `PUT /jobs/:id/approve` - Approve job (TnP only)
 - `PUT /jobs/:id/reject` - Reject job (TnP only)
+- `GET /jobs/:id/applications/export` - Export job applications to Excel (Recruiter only)
+  - Query params: `status` (optional) - Filter by status: `all`, `shortlisted`, `placed`, or specific status
+  - Returns: Excel file (.xlsx) with student information
 
 ## Application Routes (`/applications`)
 - `POST /applications/apply/:jobId` - Apply to job (Student only)

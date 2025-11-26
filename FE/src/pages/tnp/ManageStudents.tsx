@@ -27,6 +27,8 @@ import {
   Stack,
   Avatar,
   Grid,
+  Checkbox,
+  FormControlLabel,
 } from '@mui/material';
 import {
   People,
@@ -41,6 +43,7 @@ import {
   Description,
   GetApp,
 } from '@mui/icons-material';
+import * as XLSX from 'xlsx';
 import { useAuth } from '../../hooks/useAuth';
 import { userService } from '../../services/userService';
 
@@ -97,6 +100,13 @@ const ManageStudents: React.FC = () => {
   });
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [viewingStudent, setViewingStudent] = useState<Student | null>(null);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportFilterType, setExportFilterType] = useState<'verification' | 'course' | 'placement'>('verification');
+  const [exportVerificationValue, setExportVerificationValue] = useState<'Verified' | 'Unverified'>('Verified');
+  const [exportPlacementValue, setExportPlacementValue] = useState<'Placed' | 'Not Placed' | 'Shortlisted'>('Placed');
+  const [exportCourseValues, setExportCourseValues] = useState<string[]>([]);
+  const [exportWithAcademic, setExportWithAcademic] = useState(false);
+  const [exportIncludeSkills, setExportIncludeSkills] = useState(false);
 
   // Debug logging for dialog state
   useEffect(() => {
@@ -192,6 +202,91 @@ const ManageStudents: React.FC = () => {
     page * rowsPerPage + rowsPerPage
   );
 
+  const handleExport = () => {
+    let targetedStudents = [...students];
+
+    if (exportFilterType === 'verification') {
+      targetedStudents = targetedStudents.filter((student) =>
+        exportVerificationValue === 'Verified'
+          ? student.studentDetails?.isVerified
+          : !student.studentDetails?.isVerified
+      );
+    } else if (exportFilterType === 'placement') {
+      if (exportPlacementValue === 'Shortlisted') {
+        targetedStudents = targetedStudents.filter(
+          (student) => student.studentDetails?.placementStatus === 'Shortlisted'
+        );
+      } else {
+        targetedStudents = targetedStudents.filter(
+          (student) => student.studentDetails?.placementStatus === exportPlacementValue
+        );
+      }
+    } else if (exportFilterType === 'course') {
+      if (exportCourseValues.length === 0) {
+        alert('Please select at least one course to export.');
+        return;
+      }
+      targetedStudents = targetedStudents.filter((student) =>
+        exportCourseValues.includes(student.studentDetails?.courseName || '')
+      );
+    }
+
+    if (targetedStudents.length === 0) {
+      alert('No student records match the selected filters.');
+      return;
+    }
+
+    const rows = targetedStudents.map((student) => {
+      const collegeName =
+        typeof student.studentDetails?.college === 'object' && student.studentDetails?.college
+          ? student.studentDetails.college.name
+          : student.studentDetails?.college || 'N/A';
+      const placementStatus = student.studentDetails?.placementStatus || 'Not Placed';
+      const placementCompany =
+        placementStatus === 'Placed'
+          ? (student.studentDetails as any)?.placementCompany || 'Not specified'
+          : '';
+
+      const row: any = {
+        ID: student.studentDetails?.registrationNumber || student._id,
+        Name: student.fullName,
+        Email: student.email,
+        Phone: student.mobileNumber,
+        Branch: student.studentDetails?.courseName || 'N/A',
+        College: collegeName,
+        'Verification Status': student.studentDetails?.isVerified ? 'Verified' : 'Unverified',
+        'Placement Status': placementStatus,
+        'Company Name': placementCompany,
+        'Registration Date': new Date(student.createdAt).toLocaleDateString(),
+      };
+
+      if (exportWithAcademic) {
+        row['Graduation Year'] = student.studentDetails?.yearOfCompletion || '';
+        row['CGPA'] = student.studentDetails?.cgpa ?? '';
+        row['10th Percentage'] = student.studentDetails?.tenthMarks?.percentage ?? '';
+        row['12th Percentage'] = student.studentDetails?.twelfthMarks?.percentage ?? '';
+        row['Application Status (Company)'] =
+          placementStatus === 'Placed'
+            ? `${placementStatus} (${placementCompany || 'Not specified'})`
+            : placementStatus;
+      }
+
+      if (exportIncludeSkills) {
+        const skills = ((student.studentDetails as any)?.skills || []).join(', ');
+        row['Skills'] = skills;
+      }
+
+      return row;
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Student Records');
+    const timestamp = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(workbook, `student-records-${timestamp}.xlsx`);
+    setExportDialogOpen(false);
+  };
+
   const handleChangePage = (_event: unknown, newPage: number) => {
     setPage(newPage);
   };
@@ -202,19 +297,21 @@ const ManageStudents: React.FC = () => {
   };
 
   const courses = [
-    'Computer Science Engineering',
+    'Computer Science',
     'Information Technology',
-    'Electronics and Communication Engineering',
-    'Mechanical Engineering',
+    'Artificial Intelligence',
+    'AIML',
+    'Data Science',
+    'Cyber Security',
+    'ENTC',
     'Civil Engineering',
+    'Mechanical Engineering',
+    'Electronics Engineering',
+    'Robotics',
+    'Automation',
     'Electrical Engineering',
     'Chemical Engineering',
-    'Aerospace Engineering',
-    'Biotechnology',
-    'Business Administration',
-    'Commerce',
-    'Arts',
-    'Science',
+    'Biomedical Engineering',
   ];
 
   return (
@@ -225,23 +322,22 @@ const ManageStudents: React.FC = () => {
           Manage Students
         </Typography>
         <Box flexGrow={1} />
-        <Button
-          variant="outlined"
-          onClick={() => {
-            console.log('Test dialog opening');
-            setViewingStudent(students[0] || null);
-            setProfileDialogOpen(true);
-          }}
-          sx={{ mr: 1 }}
-        >
-          Test Dialog
-        </Button>
-        <Button
-          variant="outlined"
-          onClick={() => window.location.href = '/tnp/dashboard'}
-        >
-          Back to Dashboard
-        </Button>
+          <Stack direction="row" spacing={2}>
+            <Button
+              variant="contained"
+              color="secondary"
+              startIcon={<Download />}
+              onClick={() => setExportDialogOpen(true)}
+            >
+              Export Records
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => window.location.href = '/tnp/dashboard'}
+            >
+              Back to Dashboard
+            </Button>
+          </Stack>
       </Box>
 
       {error && (
@@ -468,6 +564,104 @@ const ManageStudents: React.FC = () => {
             color={verificationData.isVerified ? 'success' : 'error'}
           >
             {verificationData.isVerified ? 'Verify Student' : 'Unverify Student'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Export Dialog */}
+      <Dialog open={exportDialogOpen} onClose={() => setExportDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Export Student Records</DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+            Choose a filter to export students who meet the criteria.
+          </Typography>
+          <Stack spacing={2}>
+            <FormControl fullWidth>
+              <InputLabel>Filter Type</InputLabel>
+              <Select
+                value={exportFilterType}
+                label="Filter Type"
+                onChange={(e) => setExportFilterType(e.target.value as typeof exportFilterType)}
+              >
+                <MenuItem value="verification">Verification Status</MenuItem>
+                <MenuItem value="course">Course</MenuItem>
+                <MenuItem value="placement">Placement Status</MenuItem>
+              </Select>
+            </FormControl>
+
+            {exportFilterType === 'verification' && (
+              <FormControl fullWidth>
+                <InputLabel>Verification Status</InputLabel>
+                <Select
+                  value={exportVerificationValue}
+                  label="Verification Status"
+                  onChange={(e) => setExportVerificationValue(e.target.value as typeof exportVerificationValue)}
+                >
+                  <MenuItem value="Verified">Verified</MenuItem>
+                  <MenuItem value="Unverified">Unverified</MenuItem>
+                </Select>
+              </FormControl>
+            )}
+
+            {exportFilterType === 'placement' && (
+              <FormControl fullWidth>
+                <InputLabel>Placement Status</InputLabel>
+                <Select
+                  value={exportPlacementValue}
+                  label="Placement Status"
+                  onChange={(e) => setExportPlacementValue(e.target.value as typeof exportPlacementValue)}
+                >
+                  <MenuItem value="Placed">Placed</MenuItem>
+                  <MenuItem value="Not Placed">Not Placed</MenuItem>
+                  <MenuItem value="Shortlisted">Shortlisted</MenuItem>
+                </Select>
+              </FormControl>
+            )}
+
+            {exportFilterType === 'course' && (
+              <FormControl fullWidth>
+                <InputLabel>Courses</InputLabel>
+                <Select
+                  multiple
+                  value={exportCourseValues}
+                  label="Courses"
+                  onChange={(e) => setExportCourseValues(e.target.value as string[])}
+                  renderValue={(selected) => (selected as string[]).join(', ')}
+                >
+                  {courses.map((course) => (
+                    <MenuItem key={course} value={course}>
+                      <Checkbox checked={exportCourseValues.indexOf(course) > -1} />
+                      <Typography variant="body2">{course}</Typography>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
+
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={exportWithAcademic}
+                  onChange={(e) => setExportWithAcademic(e.target.checked)}
+                />
+              }
+              label="Export with academic details"
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={exportIncludeSkills}
+                  onChange={(e) => setExportIncludeSkills(e.target.checked)}
+                />
+              }
+              label="Include skills"
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setExportDialogOpen(false)}>Cancel</Button>
+          <Button variant="contained" startIcon={<Download />} onClick={handleExport}>
+            Download Excel
           </Button>
         </DialogActions>
       </Dialog>

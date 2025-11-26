@@ -23,7 +23,6 @@ import {
   Info as InfoIcon,
   Notifications as NotificationsIcon,
   Refresh as RefreshIcon,
-  MarkAsUnread as MarkAsUnreadIcon,
 } from '@mui/icons-material';
 import { useNotifications } from '../hooks/useNotifications';
 import { useAuth } from '../hooks/useAuth';
@@ -54,8 +53,6 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
     loadUnreadCount,
   } = useNotifications();
 
-  const [isMarkingAllAsRead, setIsMarkingAllAsRead] = useState(false);
-
   // Load notifications when dropdown opens
   useEffect(() => {
     if (open) {
@@ -79,14 +76,11 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
   const handleMarkAllAsRead = async () => {
     if (unreadCount === 0) return;
     
-    setIsMarkingAllAsRead(true);
     try {
       await markAllAsRead();
       onNotificationUpdate?.();
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
-    } finally {
-      setIsMarkingAllAsRead(false);
     }
   };
 
@@ -231,21 +225,6 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
         </Box>
         
         {/* Connection status indicators removed per requirements */}
-
-        {/* Mark All as Read Button */}
-        {unreadCount > 0 && (
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button
-              size="small"
-              startIcon={isMarkingAllAsRead ? <CircularProgress size={16} /> : <MarkAsUnreadIcon />}
-              onClick={handleMarkAllAsRead}
-              disabled={isMarkingAllAsRead}
-              sx={{ fontSize: '0.75rem' }}
-            >
-              Mark all as read
-            </Button>
-          </Box>
-        )}
       </Box>
 
       {/* Loading State */}

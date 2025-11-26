@@ -17,5 +17,8 @@ router.delete('/:id', authenticate, jobController.deleteJob);
 router.put('/:id/approve', authenticate, authorizeRoles('TnP'), validate(approveJobSchema), jobController.approveJob);
 router.put('/:id/reject', authenticate, authorizeRoles('TnP'), validate(rejectJobSchema), jobController.rejectJob);
 
+// Recruiter export route
+router.get('/:jobId/applications/export', authenticate, authorizeRoles('Recruiter'), jobController.exportJobApplications);
+
 export default router;
 
