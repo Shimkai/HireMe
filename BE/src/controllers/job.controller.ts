@@ -293,20 +293,21 @@ export const rejectJob = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const exportJobApplications = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user || req.user.role !== 'Recruiter') {
-    throw ApiError.forbidden('Only recruiters can export applications');
+  if (!req.user || (req.user.role !== 'Recruiter' && req.user.role !== 'TnP')) {
+    throw ApiError.forbidden('Only recruiters and TnP can export applications');
   }
 
   const { jobId } = req.params;
   const statusFilter = (req.query.status as string) || 'all';
 
-  // Verify job exists and belongs to the recruiter
+  // Verify job exists
   const job = await Job.findById(jobId);
   if (!job) {
     throw ApiError.notFound('Job not found');
   }
 
-  if ((job.postedBy as any).toString() !== req.user.id) {
+  // Recruiters can only export their own jobs, TnP can export any job
+  if (req.user.role === 'Recruiter' && (job.postedBy as any).toString() !== req.user.id) {
     throw ApiError.forbidden('You can only export applications for your own jobs');
   }
 

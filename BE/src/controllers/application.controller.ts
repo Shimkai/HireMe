@@ -10,6 +10,8 @@ import User from '../models/User.model';
 import { getPaginationParams, calculatePagination } from '../utils/helpers';
 import ActivityLog from '../models/ActivityLog.model';
 import { NotificationService } from '../services/notification.service';
+import { generateApplicationsExcel } from '../utils/excelExporter';
+import { calculateRecommendationScore } from '../services/job.service';
 
 export const applyToJob = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user || req.user.role !== 'Student') {
@@ -67,7 +69,7 @@ export const applyToJob = asyncHandler(async (req: Request, res: Response) => {
       originalName: req.file.originalname,
       mimetype: req.file.mimetype,
       size: req.file.size,
-      path: req.file.path,
+      path: `/uploads/resumes/${req.file.filename}`,
     },
   });
 
@@ -471,5 +473,123 @@ export const sendTestLink = asyncHandler(async (req: Request, res: Response) => 
     target,
     jobTitle: job.title
   }, 'Test link sent successfully');
+});
+
+export const exportMyJobApplications = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user || req.user.role !== 'Recruiter') {
+    throw ApiError.forbidden('Only recruiters can export applications');
+  }
+
+  const statusFilter = (req.query.status as string) || 'all';
+
+  // Get all jobs posted by this recruiter
+  const jobs = await Job.find({ postedBy: new mongoose.Types.ObjectId(req.user.id) });
+  const jobIds = jobs.map(job => job._id);
+
+  if (jobIds.length === 0) {
+    throw ApiError.notFound('No jobs found. You need to post jobs first.');
+  }
+
+  // Build status filter
+  let statusQuery: any = {};
+  
+  if (statusFilter && statusFilter !== 'all') {
+    if (statusFilter === 'shortlisted') {
+      statusQuery.status = 'Shortlisted';
+    } else if (statusFilter === 'placed') {
+      statusQuery.status = { $in: ['Offered', 'Accepted'] };
+    } else if (statusFilter === 'others') {
+      statusQuery.status = { $nin: ['Shortlisted', 'Offered', 'Accepted'] };
+    } else {
+      statusQuery.status = statusFilter;
+    }
+  }
+
+  // Find all applications for recruiter's jobs
+  const applications = await Application.find({
+    jobId: { $in: jobIds },
+    ...statusQuery,
+  })
+    .populate({
+      path: 'jobId',
+      select: 'title companyName',
+    })
+    .populate({
+      path: 'studentId',
+      select: 'fullName email studentDetails',
+      populate: {
+        path: 'studentDetails.college',
+        model: 'College',
+        select: 'name',
+      },
+    })
+    .sort({ appliedAt: -1 });
+
+  if (applications.length === 0) {
+    throw ApiError.notFound('No applications found for the specified criteria');
+  }
+
+  // Transform to export format
+  const exportData = applications.map((app: any) => {
+    const student = app.studentId;
+    const studentDetails = student?.studentDetails || {};
+    const college = studentDetails.college;
+    const job = app.jobId;
+    
+    // Calculate recommendation percentage
+    const recommendationPercentage = calculateRecommendationScore(student, job);
+
+    return {
+      registrationId: studentDetails.registrationNumber || null,
+      name: student?.fullName || 'N/A',
+      email: student?.email || 'N/A',
+      branch: studentDetails.courseName || 'N/A',
+      college: college?.name || 'N/A',
+      graduationYear: studentDetails.yearOfCompletion || null,
+      cgpa: studentDetails.cgpa || null,
+      tenthPercentage: studentDetails.tenthMarks?.percentage || null,
+      twelfthPercentage: studentDetails.twelfthMarks?.percentage || null,
+      recommendationPercentage,
+      applicationStatus: app.status || 'N/A',
+      appliedAt: app.appliedAt || app.createdAt,
+      recruiterNotes: app.recruiterNotes || null,
+      jobTitle: job?.title || 'N/A',
+      companyName: job?.companyName || 'N/A',
+    };
+  });
+
+  // Set response headers
+  const filename = `all_applicants_${Date.now()}.xlsx`;
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+  // Generate Excel with a generic title since we have multiple jobs
+  const excelStream = await generateApplicationsExcel(
+    exportData,
+    'All Job Applicants',
+    'Multiple Companies'
+  );
+
+  // Handle stream errors
+  excelStream.on('error', () => {
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, message: 'Error generating Excel file' });
+    }
+  });
+
+  // Pipe the Excel file to response
+  excelStream.pipe(res);
+
+  // Log activity (non-blocking)
+  ActivityLog.create({
+    userId: req.user.id,
+    action: 'APPLICATIONS_EXPORT',
+    entityType: 'Application',
+    details: { statusFilter, applicationCount: applications.length },
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  }).catch((error) => {
+    console.error('Failed to log export activity:', error);
+  });
 });
 

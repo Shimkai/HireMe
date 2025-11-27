@@ -50,6 +50,7 @@ const Register = () => {
     mobileNumber: '',
     password: '',
     role: '',
+    verificationPasskey: '', // Added for Recruiter and TnP
     studentDetails: {
       courseName: '',
       college: null as College | null,
@@ -95,6 +96,16 @@ const Register = () => {
   const handleChange = (e: any) => {
     const { name, value } = e.target;
     
+    // If role is changing, clear verification passkey
+    if (name === 'role') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        verificationPasskey: '', // Clear passkey when role changes
+      }));
+      return;
+    }
+    
     // Handle nested objects for role-specific details
     if (name.includes('.')) {
       const [parentKey, childKey] = name.split('.');
@@ -130,6 +141,16 @@ const Register = () => {
     setLoading(true);
 
     try {
+      // Validate verification passkey for Recruiter and TnP
+      if (formData.role === 'Recruiter' || formData.role === 'TnP') {
+        const expectedPasskey = formData.role === 'Recruiter' ? 'recruiterverify' : 'tnpverify';
+        if (formData.verificationPasskey !== expectedPasskey) {
+          setError('Invalid verification passkey. Please enter the correct passkey.');
+          setLoading(false);
+          return;
+        }
+      }
+
       // Prepare data based on role
       let submitData: any = {
         fullName: formData.fullName,
@@ -138,6 +159,11 @@ const Register = () => {
         password: formData.password,
         role: formData.role,
       };
+
+      // Add verification passkey for Recruiter and TnP
+      if (formData.role === 'Recruiter' || formData.role === 'TnP') {
+        submitData.verificationPasskey = formData.verificationPasskey;
+      }
 
       // Add role-specific details
       if (formData.role === 'Student') {
@@ -356,6 +382,17 @@ const Register = () => {
               </Typography>
               <TextField
                 fullWidth
+                label="Verification Passkey"
+                name="verificationPasskey"
+                type="password"
+                value={formData.verificationPasskey}
+                onChange={handleChange}
+                margin="normal"
+                required
+                error={formData.verificationPasskey && formData.verificationPasskey !== 'recruiterverify'}
+              />
+              <TextField
+                fullWidth
                 label="Company Name"
                 name="recruiterDetails.companyName"
                 value={formData.recruiterDetails.companyName}
@@ -410,6 +447,17 @@ const Register = () => {
               <Typography variant="h6" sx={{ mt: 3, mb: 2 }} color="primary">
                 Training & Placement Officer Information
               </Typography>
+              <TextField
+                fullWidth
+                label="Verification Passkey"
+                name="verificationPasskey"
+                type="password"
+                value={formData.verificationPasskey}
+                onChange={handleChange}
+                margin="normal"
+                required
+                error={formData.verificationPasskey && formData.verificationPasskey !== 'tnpverify'}
+              />
               <Autocomplete
                 fullWidth
                 options={colleges}

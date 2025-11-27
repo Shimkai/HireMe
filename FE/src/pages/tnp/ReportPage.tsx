@@ -73,34 +73,31 @@ const ReportPage = () => {
     setError('');
     try {
       // Always try to fetch from API first for real-time data
-      try {
-        const response = await reportService.getReportData();
-        setData(response);
-        setLastUpdated(new Date());
-        console.log('Real-time data fetched successfully:', response);
-        setError(''); // Clear any previous errors
-      } catch (apiError: any) {
-        console.warn('API not available, using sample data:', apiError);
-        
-        // Provide more specific error information
-        if (apiError.code === 'ERR_NETWORK' || apiError.message?.includes('Network Error')) {
-          setError('Backend server is not running. Please start the backend server on port 5000 to see real-time data.');
-        } else if (apiError.response?.status === 401) {
-          setError('Authentication required. Please log in again.');
-        } else if (apiError.response?.status === 403) {
-          setError('Access denied. Only TnP users can access this data.');
-        } else {
-          setError(`Unable to fetch real-time data: ${apiError.message || 'Unknown error'}`);
-        }
-        
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await reportService.getReportData();
+      setData(response);
+      setLastUpdated(new Date());
+      console.log('Real-time data fetched successfully:', response);
+      setError(''); // Clear any previous errors
+    } catch (apiError: any) {
+      console.error('API error:', apiError);
+      
+      // Provide more specific error information
+      if (apiError.code === 'ERR_NETWORK' || apiError.message?.includes('Network Error')) {
+        setError('Backend server is not running. Please start the backend server on port 5000 to see real-time data.');
+      } else if (apiError.response?.status === 401) {
+        setError('Authentication required. Please log in again.');
+      } else if (apiError.response?.status === 403) {
+        setError('Access denied. Only TnP users can access this data.');
+      } else {
+        setError(`Unable to fetch real-time data: ${apiError.response?.data?.error?.message || apiError.message || 'Unknown error'}`);
+      }
+      
+      // Only use sample data as a last resort if API completely fails
+      // But show a clear warning that this is dummy data
+      if (apiError.code === 'ERR_NETWORK') {
         setData(sampleData);
         setLastUpdated(new Date());
       }
-    } catch (err) {
-      setError('Failed to fetch report data');
-      console.error('Error fetching report data:', err);
     } finally {
       setLoading(false);
     }

@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { applicationService } from '../../services/applicationService';
 import { Application } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
+import axios from 'axios';
 
 const ApplicantsPage = () => {
   const { user } = useAuth();
@@ -20,6 +21,8 @@ const ApplicantsPage = () => {
   const [recruiterNotes, setRecruiterNotes] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [downloadingResume, setDownloadingResume] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     fetchApplications();
@@ -32,6 +35,10 @@ const ApplicantsPage = () => {
       // Fetch applications for all jobs posted by this recruiter
       const response = await applicationService.getMyJobApplications();
       setApplications(response.data);
+      // Log first application to debug resume path structure
+      if (response.data.length > 0) {
+        console.log('Sample application resume data:', response.data[0].resume);
+      }
     } catch (err: any) {
       console.error('Error fetching applications:', err);
       setError(err.response?.data?.error?.message || 'Failed to fetch applications');
@@ -104,9 +111,89 @@ const ApplicantsPage = () => {
     }
   };
 
-  const downloadResume = (application: Application) => {
-    if (application.resume?.path) {
-      window.open(`http://localhost:5000${application.resume.path}`, '_blank');
+  const downloadResume = async (application: Application) => {
+    if (!application.resume) {
+      setError('Resume not available for this applicant');
+      return;
+    }
+
+    setDownloadingResume(true);
+    setError('');
+
+    try {
+      // Normalize the path - ensure it starts with /uploads/
+      let resumePath = application.resume.path;
+      
+      // If path doesn't start with /uploads/, construct it from filename
+      if (!resumePath || !resumePath.startsWith('/uploads/')) {
+        if (application.resume.filename) {
+          resumePath = `/uploads/resumes/${application.resume.filename}`;
+        } else {
+          throw new Error('Resume path or filename not found');
+        }
+      }
+
+      console.log('Downloading resume from:', resumePath);
+      console.log('Resume data:', application.resume);
+
+      // Use axios to fetch the file as a blob (bypasses API base URL)
+      // Note: withCredentials is false for static file downloads to avoid CORS issues
+      const response = await axios.get(`http://localhost:5000${resumePath}`, {
+        responseType: 'blob',
+        withCredentials: false,
+      });
+
+      console.log('Response received, blob size:', response.data.size, 'bytes');
+
+      if (!response.data || response.data.size === 0) {
+        // Try alternative path using filename directly
+        if (application.resume.filename) {
+          const altPath = `/uploads/resumes/${application.resume.filename}`;
+          console.log('Trying alternative path:', altPath);
+          const altResponse = await axios.get(`http://localhost:5000${altPath}`, {
+            responseType: 'blob',
+            withCredentials: false,
+          });
+          
+          if (!altResponse.data || altResponse.data.size === 0) {
+            throw new Error('Resume file is empty or not found');
+          }
+          
+          const blob = altResponse.data;
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = application.resume.originalName || `${getStudentName(application)}_Resume.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+          setDownloadingResume(false);
+          return;
+        }
+        
+        throw new Error('Resume file is empty');
+      }
+
+      const blob = response.data;
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = application.resume.originalName || `${getStudentName(application)}_Resume.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      console.log('Resume downloaded successfully');
+    } catch (err: any) {
+      console.error('Download error:', err);
+      const errorMessage = err.response?.status === 404 
+        ? 'Resume file not found on server. Please contact support.'
+        : err.message || 'Failed to download resume. Please try again.';
+      setError(errorMessage);
+    } finally {
+      setDownloadingResume(false);
     }
   };
 
@@ -145,6 +232,58 @@ const ApplicantsPage = () => {
       return application.studentId as any;
     }
     return null;
+  };
+
+  const handleExportToExcel = async () => {
+    try {
+      setExporting(true);
+      setError('');
+
+      // Map frontend status filter to backend format
+      let backendStatusFilter: string | undefined = undefined;
+      if (statusFilter && statusFilter !== 'All') {
+        // Map frontend status values to backend format
+        const statusMap: { [key: string]: string } = {
+          'Under Review': 'Under Review',
+          'Shortlisted': 'Shortlisted',
+          'Selected': 'Accepted', // Frontend uses 'Selected', backend uses 'Accepted'
+          'Rejected': 'Rejected',
+        };
+        backendStatusFilter = statusMap[statusFilter] || statusFilter;
+      }
+
+      const response = await applicationService.exportMyJobApplications(backendStatusFilter);
+
+      const contentType =
+        response instanceof Blob
+          ? response.type
+          : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+      const blob = response instanceof Blob ? response : new Blob([response], { type: contentType });
+      const url = window.URL.createObjectURL(blob);
+
+      let filename = `all_applicants_${Date.now()}.xlsx`;
+      if (statusFilter !== 'All') {
+        filename = `applicants_${statusFilter.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}.xlsx`;
+      }
+
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error('Export error:', err);
+      const errorMessage = err.response?.data?.error?.message 
+        || err.response?.data?.message 
+        || err.message 
+        || 'Failed to export applicants. Please try again.';
+      setError(errorMessage);
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -256,8 +395,14 @@ const ApplicantsPage = () => {
                 </TextField>
               </Grid>
               <Grid item xs={12} md={3}>
-                <Button variant="outlined" fullWidth startIcon={<Download />}>
-                  Export to Excel
+                <Button 
+                  variant="outlined" 
+                  fullWidth 
+                  startIcon={exporting ? <CircularProgress size={20} /> : <Download />}
+                  onClick={handleExportToExcel}
+                  disabled={exporting || filteredApplications.length === 0}
+                >
+                  {exporting ? 'Exporting...' : 'Export to Excel'}
                 </Button>
               </Grid>
             </Grid>
@@ -491,9 +636,10 @@ const ApplicantsPage = () => {
             <Button 
               variant="contained" 
               onClick={() => downloadResume(selectedApplication!)}
-              startIcon={<Download />}
+              startIcon={downloadingResume ? <CircularProgress size={20} /> : <Download />}
+              disabled={downloadingResume || !selectedApplication?.resume}
             >
-              Download Resume
+              {downloadingResume ? 'Downloading...' : 'Download Resume'}
             </Button>
           </DialogActions>
         </Dialog>

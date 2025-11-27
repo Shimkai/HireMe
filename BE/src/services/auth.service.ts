@@ -10,6 +10,20 @@ export const registerUser = async (userData: any): Promise<{ user: any; token: s
     throw ApiError.conflict('Email already registered');
   }
 
+  // Validate verification passkey for Recruiter and TnP
+  if (userData.role === 'Recruiter' || userData.role === 'TnP') {
+    const expectedPasskey = userData.role === 'Recruiter' ? 'recruiterverify' : 'tnpverify';
+    if (!userData.verificationPasskey) {
+      throw ApiError.badRequest('Verification passkey is required');
+    }
+    if (userData.verificationPasskey !== expectedPasskey) {
+      throw ApiError.badRequest('Invalid verification passkey. Please enter the correct passkey.');
+    }
+  }
+
+  // Remove verificationPasskey from userData before creating user (it's not stored in the database)
+  delete userData.verificationPasskey;
+
   // Set default college for students if not specified
   if (userData.role === 'Student' && userData.studentDetails && !userData.studentDetails.college) {
     const College = require('../models/College.model').default;

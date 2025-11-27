@@ -27,7 +27,7 @@ const allowedOrigins = [
   config.client.url,
   'http://localhost:3000',
   'http://localhost:5173'
-];
+].filter(Boolean); // Remove any undefined/null values
 
 app.use(
   cors({
@@ -65,12 +65,25 @@ const uploadsPath = config.env === 'development'
   ? path.join(process.cwd(), 'src', 'uploads')
   : path.join(__dirname, 'uploads');
 
-app.use('/uploads', (_req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
+app.use('/uploads', (req, res, next) => {
+  // Allow specific origins for CORS when credentials are used
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Credentials', 'true');
+  } else {
+    res.header('Access-Control-Allow-Origin', '*');
+  }
   res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
   res.header('Cache-Control', 'public, max-age=31536000');
-  next();
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  
+  return next();
 }, express.static(uploadsPath));
 
 // Health check route
@@ -96,14 +109,21 @@ app.use('*', (_req, res) => {
 // Global error handler
 app.use(errorHandler);
 
-// Database connection
-connectDatabase();
-
 // Start server with port conflict handling
 const PORT = config.port;
 
 const startServer = async () => {
   try {
+    // Connect to database first
+    try {
+      await connectDatabase();
+    } catch (dbError: any) {
+      logger.error('⚠️ Database connection failed, but continuing server startup...');
+      logger.error(`⚠️ Error details: ${dbError?.message || dbError}`);
+      logger.error('⚠️ API endpoints will not work until database is connected');
+      logger.error('💡 Make sure MongoDB is running: mongod or docker-compose up -d');
+    }
+    
     // Create HTTP server
     const server = createServer(app);
     
@@ -152,8 +172,17 @@ const startServer = async () => {
     });
 
     return server;
-  } catch (error) {
+  } catch (error: any) {
     logger.error('❌ Failed to start server:', error);
+    logger.error('❌ Error details:', error?.message || error);
+    logger.error('❌ Stack trace:', error?.stack);
+    // In development, provide more helpful error messages
+    if (config.env === 'development') {
+      logger.error('💡 Check the error above and ensure:');
+      logger.error('   1. MongoDB is running');
+      logger.error('   2. All environment variables are set in .env file');
+      logger.error('   3. Port 5000 is not already in use');
+    }
     process.exit(1);
   }
 };
@@ -161,7 +190,12 @@ const startServer = async () => {
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err: Error) => {
   logger.error('Unhandled Promise Rejection:', err);
-  process.exit(1);
+  // In development, log but don't crash - allows debugging
+  if (config.env === 'production') {
+    process.exit(1);
+  } else {
+    logger.warn('⚠️ Continuing despite unhandled rejection (development mode)');
+  }
 });
 
 // Start the server

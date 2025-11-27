@@ -21,7 +21,7 @@ interface ApplicationExportData {
  * Calculate recommendation/match score for a student against a job
  * Uses the same logic as recommendation.controller.ts
  */
-const calculateRecommendationScore = (student: any, job: any): number => {
+export const calculateRecommendationScore = (student: any, job: any): number => {
   const studentSkillsArray = (student.studentDetails?.skills || []).map((s: any) => String(s).toLowerCase());
   const studentInterestsArray = (student.studentDetails?.areaOfInterest || []).map((s: any) => String(s).toLowerCase());
   const jobSkillsArray = (job.skillsRequired || []).map((s: any) => String(s).toLowerCase());

@@ -88,4 +88,12 @@ export const applicationService = {
     });
     return response.data.data;
   },
+
+  exportMyJobApplications: async (statusFilter?: string): Promise<Blob> => {
+    const response = await api.get('/applications/my-job-applications/export', {
+      params: { status: statusFilter },
+      responseType: 'blob',
+    });
+    return response.data;
+  },
 };

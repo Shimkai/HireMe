@@ -1,5 +1,5 @@
-import { Container, Grid, Card, CardContent, Typography, Button, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Alert, CircularProgress, TextField, ToggleButtonGroup, ToggleButton, Stack, InputAdornment, MenuItem, Select, FormControl, InputLabel } from '@mui/material';
-import { CheckCircle, Cancel, Visibility, Business, FilterList, People as PeopleIcon } from '@mui/icons-material';
+import { Container, Grid, Card, CardContent, Typography, Button, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Alert, CircularProgress, TextField, ToggleButtonGroup, ToggleButton, Stack, InputAdornment, MenuItem, Select, FormControl, InputLabel, FormLabel, RadioGroup, FormControlLabel, Radio } from '@mui/material';
+import { CheckCircle, Cancel, Visibility, Business, FilterList, People as PeopleIcon, Download } from '@mui/icons-material';
 import MainLayout from '../../components/layout/MainLayout';
 import { useState, useEffect } from 'react';
 import { jobService } from '../../services/jobService';
@@ -12,6 +12,8 @@ const statusOptions = [
   { value: 'Approved', label: 'Approved jobs' },
   { value: 'Rejected', label: 'Rejected jobs' },
 ];
+
+type ExportFilter = 'all' | 'shortlisted' | 'placed' | 'others';
 
 const PendingJobsPage = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -35,6 +37,12 @@ const PendingJobsPage = () => {
   const [applicationsError, setApplicationsError] = useState('');
   const [applicationsSearch, setApplicationsSearch] = useState('');
   const [applicationsSort, setApplicationsSort] = useState<'latest' | 'oldest' | 'status'>('latest');
+  
+  // Export dialog state
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState('');
+  const [exportStatusFilter, setExportStatusFilter] = useState<ExportFilter>('all');
 
   useEffect(() => {
     fetchJobs();
@@ -153,6 +161,65 @@ const PendingJobsPage = () => {
       setApplicationsError(error.response?.data?.error?.message || 'Failed to load applications');
     } finally {
       setApplicationsLoading(false);
+    }
+  };
+
+  const handleOpenExportDialog = () => {
+    if (!applicationsDialog.job) return;
+    setExportStatusFilter('all');
+    setExportError('');
+    setExportDialogOpen(true);
+  };
+
+  const handleCloseExportDialog = () => {
+    if (exporting) return;
+    setExportDialogOpen(false);
+    setExportStatusFilter('all');
+    setExportError('');
+  };
+
+  const handleExportApplicants = async () => {
+    if (!applicationsDialog.job) return;
+    try {
+      setExporting(true);
+      setExportError('');
+
+      const response = await jobService.exportJobApplications(applicationsDialog.job._id, exportStatusFilter);
+
+      const contentType =
+        response.headers?.['content-type'] ||
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+      const blob = new Blob([response.data], { type: contentType });
+      const url = window.URL.createObjectURL(blob);
+
+      let filename = `${applicationsDialog.job.title.replace(/[^a-z0-9]/gi, '_')}_applications.xlsx`;
+      const disposition = response.headers?.['content-disposition'];
+      if (disposition) {
+        const match = disposition.match(/filename="?(.+)"?/);
+        if (match && match[1]) {
+          filename = match[1];
+        }
+      }
+
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      handleCloseExportDialog();
+    } catch (err: any) {
+      console.error('Export error:', err);
+      const errorMessage = err.response?.data?.error?.message 
+        || err.response?.data?.message 
+        || err.message 
+        || 'Failed to export applicants. Please try again.';
+      setExportError(errorMessage);
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -351,12 +418,9 @@ const PendingJobsPage = () => {
                               <IconButton size="small" color="primary" sx={{ mr: 1 }} onClick={() => openDetails(job)}>
                                 <Visibility />
                               </IconButton>
-                      <IconButton size="small" color="primary" sx={{ mr: 1 }} onClick={() => openDetails(job)}>
-                        <Visibility />
-                      </IconButton>
-                      <IconButton size="small" color="secondary" sx={{ mr: 1 }} onClick={() => openApplicationsDialog(job)}>
-                        <PeopleIcon />
-                      </IconButton>
+                              <IconButton size="small" color="secondary" sx={{ mr: 1 }} onClick={() => openApplicationsDialog(job)}>
+                                <PeopleIcon />
+                              </IconButton>
                       {(job.status === 'Pending' || job.status === 'Rejected') && (
                                 <IconButton 
                                   size="small" 
@@ -561,18 +625,15 @@ const PendingJobsPage = () => {
                     onChange={(e) => setApplicationsSearch(e.target.value)}
                     placeholder="Search by name, email, or branch"
                   />
-                  <FormControl sx={{ minWidth: 160 }}>
-                    <InputLabel>Sort by</InputLabel>
-                    <Select
-                      value={applicationsSort}
-                      label="Sort by"
-                      onChange={(e) => setApplicationsSort(e.target.value as 'latest' | 'oldest' | 'status')}
-                    >
-                      <MenuItem value="latest">Latest first</MenuItem>
-                      <MenuItem value="oldest">Oldest first</MenuItem>
-                      <MenuItem value="status">Status</MenuItem>
-                    </Select>
-                  </FormControl>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Download />}
+                    onClick={handleOpenExportDialog}
+                    disabled={applicationsData.length === 0}
+                    sx={{ minWidth: 160 }}
+                  >
+                    Export Excel
+                  </Button>
                 </Box>
 
                 {filteredApplications.length === 0 ? (
@@ -718,6 +779,63 @@ const PendingJobsPage = () => {
             </Button>
           </DialogActions>
         </Dialog>
+
+        {/* Export Applicants Dialog */}
+        {applicationsDialog.job && (
+          <Dialog open={exportDialogOpen} onClose={handleCloseExportDialog} maxWidth="sm" fullWidth>
+            <DialogTitle>Export Applicants for {applicationsDialog.job.title}</DialogTitle>
+            <DialogContent>
+              {exportError && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {exportError}
+                </Alert>
+              )}
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Choose which applicants you want to include in the Excel file.
+              </Typography>
+              <FormControl component="fieldset" fullWidth>
+                <FormLabel component="legend">Applicant Group</FormLabel>
+                <RadioGroup
+                  value={exportStatusFilter}
+                  onChange={(e) => setExportStatusFilter(e.target.value as ExportFilter)}
+                >
+                  <FormControlLabel
+                    value="all"
+                    control={<Radio />}
+                    label="All applied students"
+                  />
+                  <FormControlLabel
+                    value="shortlisted"
+                    control={<Radio />}
+                    label="Shortlisted students"
+                  />
+                  <FormControlLabel
+                    value="placed"
+                    control={<Radio />}
+                    label="Placed students"
+                  />
+                  <FormControlLabel
+                    value="others"
+                    control={<Radio />}
+                    label="Not yet shortlisted or placed"
+                  />
+                </RadioGroup>
+              </FormControl>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleCloseExportDialog} disabled={exporting}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleExportApplicants}
+                variant="contained"
+                disabled={exporting}
+              >
+                {exporting ? <CircularProgress size={20} /> : 'Download Excel'}
+              </Button>
+            </DialogActions>
+          </Dialog>
+        )}
       </Container>
     </MainLayout>
   );

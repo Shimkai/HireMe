@@ -1,0 +1,10 @@
+Loaded ENV: mongodb://localhost:27017/hireme
+[32minfo[39m: ✅ MongoDB connected: localhost {"timestamp":"2025-11-27 11:24:09"}
+Socket service initialized (WebSocket functionality disabled for now)
+[31merror[39m: ❌ Port 5000 is already in use! {"timestamp":"2025-11-27 11:24:09"}
+[31merror[39m: 💡 Solutions: {"timestamp":"2025-11-27 11:24:09"}
+[31merror[39m:    1. Kill the process using this port: {"timestamp":"2025-11-27 11:24:09"}
+[31merror[39m:       netstat -ano | findstr :5000 {"timestamp":"2025-11-27 11:24:09"}
+[31merror[39m:       taskkill /PID <PID> /F {"timestamp":"2025-11-27 11:24:09"}
+[31merror[39m:    2. Or change the PORT in your .env file {"timestamp":"2025-11-27 11:24:09"}
+[31merror[39m:    3. Or wait a few seconds and try again {"timestamp":"2025-11-27 11:24:09"}

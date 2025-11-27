@@ -15,6 +15,8 @@ interface ApplicationExportData {
   applicationStatus: string;
   appliedAt: Date;
   recruiterNotes: string | null;
+  jobTitle?: string;
+  companyName?: string;
 }
 
 export const generateApplicationsExcel = async (
@@ -31,13 +33,22 @@ export const generateApplicationsExcel = async (
 
   const worksheet = workbook.addWorksheet('Applications');
 
-  // Set column headers
-  worksheet.columns = [
+  // Set column headers - include job title and company if available
+  const hasMultipleJobs = applications.some(app => app.jobTitle || app.companyName);
+  const baseColumns = [
     { header: 'ID', key: 'registrationId', width: 18 },
     { header: 'Name', key: 'name', width: 25 },
     { header: 'Email', key: 'email', width: 30 },
     { header: 'Branch', key: 'branch', width: 20 },
     { header: 'College', key: 'college', width: 30 },
+  ];
+  
+  const jobColumns = hasMultipleJobs ? [
+    { header: 'Job Title', key: 'jobTitle', width: 30 },
+    { header: 'Company', key: 'companyName', width: 25 },
+  ] : [];
+  
+  const academicColumns = [
     { header: 'Graduation Year', key: 'graduationYear', width: 18 },
     { header: 'CGPA', key: 'cgpa', width: 12 },
     { header: '10th Percentage', key: 'tenthPercentage', width: 18 },
@@ -47,6 +58,8 @@ export const generateApplicationsExcel = async (
     { header: 'Applied At', key: 'appliedAt', width: 20 },
     { header: 'Recruiter Notes', key: 'recruiterNotes', width: 40 },
   ];
+  
+  worksheet.columns = [...baseColumns, ...jobColumns, ...academicColumns];
 
   // Style header row
   worksheet.getRow(1).font = { bold: true, size: 12 };
@@ -61,21 +74,29 @@ export const generateApplicationsExcel = async (
 
   // Add data rows
   applications.forEach((app) => {
-    const row = worksheet.addRow({
+    const rowData: any = {
       registrationId: app.registrationId || 'N/A',
       name: app.name || 'N/A',
       email: app.email || 'N/A',
       branch: app.branch || 'N/A',
       college: app.college || 'N/A',
-      graduationYear: app.graduationYear || 'N/A',
-      cgpa: app.cgpa !== null && app.cgpa !== undefined ? app.cgpa : 'N/A',
-      tenthPercentage: app.tenthPercentage !== null && app.tenthPercentage !== undefined ? app.tenthPercentage : 'N/A',
-      twelfthPercentage: app.twelfthPercentage !== null && app.twelfthPercentage !== undefined ? app.twelfthPercentage : 'N/A',
-      recommendationPercentage: app.recommendationPercentage || 0,
-      applicationStatus: app.applicationStatus || 'N/A',
-      appliedAt: app.appliedAt ? new Date(app.appliedAt).toLocaleString() : 'N/A',
-      recruiterNotes: app.recruiterNotes || 'N/A',
-    });
+    };
+    
+    if (hasMultipleJobs) {
+      rowData.jobTitle = app.jobTitle || 'N/A';
+      rowData.companyName = app.companyName || 'N/A';
+    }
+    
+    rowData.graduationYear = app.graduationYear || 'N/A';
+    rowData.cgpa = app.cgpa !== null && app.cgpa !== undefined ? app.cgpa : 'N/A';
+    rowData.tenthPercentage = app.tenthPercentage !== null && app.tenthPercentage !== undefined ? app.tenthPercentage : 'N/A';
+    rowData.twelfthPercentage = app.twelfthPercentage !== null && app.twelfthPercentage !== undefined ? app.twelfthPercentage : 'N/A';
+    rowData.recommendationPercentage = app.recommendationPercentage || 0;
+    rowData.applicationStatus = app.applicationStatus || 'N/A';
+    rowData.appliedAt = app.appliedAt ? new Date(app.appliedAt).toLocaleString() : 'N/A';
+    rowData.recruiterNotes = app.recruiterNotes || 'N/A';
+    
+    const row = worksheet.addRow(rowData);
 
     // Style data rows
     row.alignment = { vertical: 'middle', horizontal: 'left' };

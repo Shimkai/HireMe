@@ -94,7 +94,7 @@ const RecommendedStudents: React.FC<RecommendedStudentsProps> = ({ jobId, open, 
     setError('');
     
     try {
-      const response = await api.get(`/recommendations/${jobId}?top_k=30`);
+      const response = await api.get(`/recommendations/job/${jobId}?top_k=30`);
       console.log('Full recommendation response:', response);
       console.log('Recommendation data:', response.data);
       

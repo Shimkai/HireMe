@@ -24,6 +24,14 @@ export const registerSchema = Joi.object({
     'any.only': 'Role must be Student, Recruiter, or TnP',
     'string.empty': 'Role is required',
   }),
+  // Verification passkey - required for Recruiter and TnP
+  verificationPasskey: Joi.when('role', {
+    is: Joi.string().valid('Recruiter', 'TnP'),
+    then: Joi.string().required().messages({
+      'string.empty': 'Verification passkey is required',
+    }),
+    otherwise: Joi.forbidden(),
+  }),
   // Student details
   studentDetails: Joi.when('role', {
     is: 'Student',

@@ -22,6 +22,13 @@ const envSchema = Joi.object({
 const { error, value: envVars } = envSchema.validate(process.env);
 
 if (error) {
+  console.error('❌ Environment variable validation failed!');
+  console.error('❌ Missing or invalid environment variables:');
+  error.details.forEach((detail) => {
+    console.error(`   - ${detail.path.join('.')}: ${detail.message}`);
+  });
+  console.error('\n💡 Please check your .env file and ensure all required variables are set.');
+  console.error('💡 Required variables: MONGODB_URI, JWT_SECRET, CLIENT_URL');
   throw new Error(`Config validation error: ${error.message}`);
 }
 
