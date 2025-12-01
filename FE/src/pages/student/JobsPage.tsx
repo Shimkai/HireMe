@@ -255,10 +255,24 @@ const JobsPage = () => {
         </Card>
 
         <Grid container spacing={3}>
-          {filteredJobs.map((job) => (
-            <Grid item xs={12} md={6} lg={4} key={job._id}>
-              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <CardContent sx={{ flexGrow: 1 }}>
+          {filteredJobs.map((job) => {
+            const isStudent = user?.role === 'Student';
+            const isDeadlinePassed = new Date(job.applicationDeadline) < new Date();
+            const cgpaEligible =
+              !job.eligibility?.minCGPA ||
+              !user?.studentDetails?.cgpa ||
+              user.studentDetails.cgpa >= job.eligibility.minCGPA;
+            const courseEligible =
+              !job.eligibility?.allowedCourses ||
+              job.eligibility.allowedCourses.length === 0 ||
+              !user?.studentDetails?.courseName ||
+              job.eligibility.allowedCourses.includes(user.studentDetails.courseName);
+            const isEligible = isStudent && cgpaEligible && courseEligible;
+
+            return (
+              <Grid item xs={12} md={6} lg={4} key={job._id}>
+                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                  <CardContent sx={{ flexGrow: 1 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                     <Typography variant="h6" component="h2" gutterBottom>
                       {job.title}
@@ -313,42 +327,43 @@ const JobsPage = () => {
                       )}
                     </Box>
                   </Box>
-                </CardContent>
-                
-                <Box sx={{ p: 2, pt: 0 }}>
-                  {appliedJobIds.has(job._id) ? (
+                  </CardContent>
+                  
+                  <Box sx={{ p: 2, pt: 0 }}>
+                    {appliedJobIds.has(job._id) ? (
+                      <Button
+                        fullWidth
+                        variant="contained"
+                        disabled
+                        sx={{ mb: 1 }}
+                      >
+                        Already Applied
+                      </Button>
+                    ) : (
+                      <Button
+                        fullWidth
+                        variant="contained"
+                        startIcon={isEligible ? <Send /> : undefined}
+                        sx={{ mb: 1 }}
+                        onClick={() => handleApplyClick(job)}
+                        disabled={!job.isActive || isDeadlinePassed || !isEligible}
+                      >
+                        {!isEligible ? 'Not Eligible' : 'Apply Now'}
+                      </Button>
+                    )}
                     <Button
                       fullWidth
-                      variant="contained"
-                      disabled
-                      sx={{ mb: 1 }}
+                      variant="outlined"
+                      startIcon={<Visibility />}
+                      onClick={() => navigate(`/jobs/${job._id}`)}
                     >
-                      Already Applied
+                      View Details
                     </Button>
-                  ) : (
-                    <Button
-                      fullWidth
-                      variant="contained"
-                      startIcon={<Send />}
-                      sx={{ mb: 1 }}
-                      onClick={() => handleApplyClick(job)}
-                      disabled={!job.isActive || new Date(job.applicationDeadline) < new Date()}
-                    >
-                      Apply Now
-                    </Button>
-                  )}
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    startIcon={<Visibility />}
-                    onClick={() => navigate(`/jobs/${job._id}`)}
-                  >
-                    View Details
-                  </Button>
-                </Box>
-              </Card>
-            </Grid>
-          ))}
+                  </Box>
+                </Card>
+              </Grid>
+            );
+          })}
         </Grid>
 
         {/* Application Dialog */}

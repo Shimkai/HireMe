@@ -279,6 +279,23 @@ const Profile: React.FC = () => {
 
       // Remove email from profileData as it shouldn't be updatable
       const { email, ...updateData } = profileData;
+      
+      // Normalize areaOfInterest to valid enum values
+      if (updateData.studentDetails?.areaOfInterest && updateData.studentDetails.areaOfInterest.length > 0) {
+        const enumMapping: { [key: string]: string } = {
+          'ReactJS': 'React',
+          'react.js': 'React.js',
+          'reactjs': 'React',
+        };
+        
+        updateData.studentDetails.areaOfInterest = updateData.studentDetails.areaOfInterest
+          .map((area: string) => {
+            const normalized = enumMapping[area];
+            return normalized || area;
+          })
+          .filter((value: string, index: number, self: string[]) => self.indexOf(value) === index); // Remove duplicates
+      }
+      
       console.log('Saving profile data:', updateData);
       
       const response = await userService.updateProfile(updateData as any);
@@ -729,6 +746,7 @@ const Profile: React.FC = () => {
                   value={profileData.studentDetails.registrationNumber}
                   onChange={(e) => handleInputChange('studentDetails.registrationNumber', e.target.value)}
                   disabled={!editing}
+                  inputProps={{ dir: 'ltr' }}
                 />
               </Grid>
               <Grid item xs={12} md={6}>

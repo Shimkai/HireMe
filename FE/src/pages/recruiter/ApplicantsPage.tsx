@@ -1,5 +1,5 @@
 import { Container, Grid, Card, CardContent, Typography, Button, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, IconButton, TextField, InputAdornment, Avatar, Dialog, DialogTitle, DialogContent, DialogActions, Alert, CircularProgress, Menu, MenuItem, FormControl, InputLabel, Select } from '@mui/material';
-import { Search, Visibility, Download, Email, Phone, School, Work, CheckCircle, Cancel, Star, MoreVert } from '@mui/icons-material';
+import { Search, Visibility, Download, School, Work, CheckCircle, Cancel, Star, MoreVert } from '@mui/icons-material';
 import MainLayout from '../../components/layout/MainLayout';
 import { useState, useEffect } from 'react';
 import { applicationService } from '../../services/applicationService';
@@ -542,36 +542,6 @@ const ApplicantsPage = () => {
                 </TableBody>
               </Table>
             </TableContainer>
-          </CardContent>
-        </Card>
-
-        <Card sx={{ mt: 3 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Quick Actions
-            </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6} md={3}>
-                <Button variant="outlined" fullWidth startIcon={<Email />}>
-                  Send Bulk Email
-                </Button>
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <Button variant="outlined" fullWidth startIcon={<Download />}>
-                  Download All Resumes
-                </Button>
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <Button variant="outlined" fullWidth startIcon={<CheckCircle />}>
-                  Shortlist All
-                </Button>
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <Button variant="outlined" fullWidth startIcon={<Phone />}>
-                  Schedule Interviews
-                </Button>
-              </Grid>
-            </Grid>
           </CardContent>
         </Card>
           </>

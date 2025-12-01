@@ -13,6 +13,7 @@ import { Work as WorkIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import JobCard from './JobCard';
 import { useAuth } from '../../hooks/useAuth';
 import { jobService } from '../../services/jobService';
+import { applicationService } from '../../services/applicationService';
 import axios from 'axios';
 
 interface JobRecommendation {
@@ -40,6 +41,7 @@ const Recommendations: React.FC<{ limit?: number }> = ({ limit = 6 }) => {
   const [recommendations, setRecommendations] = useState<JobRecommendation[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set());
 
   // Helper function to calculate match score
   const calculateMatchScore = (studentData: any, job: any): {
@@ -96,7 +98,20 @@ const Recommendations: React.FC<{ limit?: number }> = ({ limit = 6 }) => {
   
   useEffect(() => {
     fetchRecommendations();
+    fetchAppliedJobs();
   }, [user]);
+
+  const fetchAppliedJobs = async () => {
+    if (!user) return;
+    
+    try {
+      const response = await applicationService.getMyApplications();
+      const appliedIds = new Set(response.data.map((app: any) => app.jobId?._id || app.jobId));
+      setAppliedJobIds(appliedIds);
+    } catch (err) {
+      console.error('Error fetching applied jobs:', err);
+    }
+  };
 
   const fetchRecommendations = async () => {
     if (!user) return;
@@ -245,7 +260,10 @@ const Recommendations: React.FC<{ limit?: number }> = ({ limit = 6 }) => {
         <Button
           variant="outlined"
           startIcon={<RefreshIcon />}
-          onClick={fetchRecommendations}
+          onClick={() => {
+            fetchRecommendations();
+            fetchAppliedJobs();
+          }}
           disabled={loading}
         >
           Refresh
@@ -282,6 +300,7 @@ const Recommendations: React.FC<{ limit?: number }> = ({ limit = 6 }) => {
                 job={job}
                 onApply={handleApply}
                 onViewDetails={handleViewDetails}
+                hasApplied={appliedJobIds.has(job.job_id)}
               />
             </Grid>
           ))}

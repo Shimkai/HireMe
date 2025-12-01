@@ -40,9 +40,12 @@ interface JobCardProps {
   job: JobRecommendation;
   onApply: (jobId: string) => void;
   onViewDetails: (jobId: string) => void;
+  hasApplied?: boolean;
 }
 
-const JobCard: React.FC<JobCardProps> = ({ job, onApply, onViewDetails }) => {
+const JobCard: React.FC<JobCardProps> = ({ job, onApply, onViewDetails, hasApplied = false }) => {
+  const isEligible = job.cgpa_above_threshold;
+
   const getMatchColor = (score: number) => {
     if (score >= 80) return 'success';
     if (score >= 60) return 'warning';
@@ -171,14 +174,15 @@ const JobCard: React.FC<JobCardProps> = ({ job, onApply, onViewDetails }) => {
         {/* Actions */}
         <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
           <Button
-            variant="contained"
-            color="primary"
-            startIcon={<SendIcon />}
-            onClick={() => onApply(job.job_id)}
+            variant={hasApplied ? 'outlined' : 'contained'}
+            color={hasApplied ? 'success' : 'primary'}
+            startIcon={!hasApplied && isEligible ? <SendIcon /> : undefined}
+            onClick={() => !hasApplied && isEligible && onApply(job.job_id)}
+            disabled={hasApplied || !isEligible}
             sx={{ flex: 1 }}
             fullWidth
           >
-            Apply Now
+            {hasApplied ? 'Already Applied' : !isEligible ? 'Not Eligible' : 'Apply Now'}
           </Button>
           <IconButton
             color="primary"

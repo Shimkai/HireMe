@@ -336,6 +336,7 @@ const Register = () => {
                 value={formData.studentDetails.registrationNumber}
                 onChange={handleChange}
                 margin="normal"
+                inputProps={{ dir: 'ltr' }}
               />
               <Autocomplete
                 multiple

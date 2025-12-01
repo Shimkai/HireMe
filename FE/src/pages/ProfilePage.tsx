@@ -557,8 +557,25 @@ const ProfilePage = () => {
           cgpa: formData.cgpa ? parseFloat(formData.cgpa.toString()) : undefined,
           yearOfCompletion: formData.yearOfCompletion ? parseInt(formData.yearOfCompletion.toString()) : undefined,
           registrationNumber: formData.registrationNumber,
-          // Map skills to backend's expected field - use valid enum values
-          areaOfInterest: formData.skills.length > 0 ? formData.skills : undefined,
+          // Map skills to backend's expected field - normalize to valid enum values
+          areaOfInterest: formData.skills.length > 0 ? (() => {
+            // Normalize invalid enum values to valid ones
+            const enumMapping: { [key: string]: string } = {
+              'ReactJS': 'React',
+              'react.js': 'React.js',
+              'reactjs': 'React',
+            };
+            
+            return formData.skills.map(skill => {
+              // Check if skill needs normalization
+              const normalized = enumMapping[skill];
+              if (normalized) {
+                return normalized;
+              }
+              // Return original if it's already valid or no mapping exists
+              return skill;
+            }).filter((value, index, self) => self.indexOf(value) === index); // Remove duplicates
+          })() : undefined,
           // Only include nested objects if they have content
           ...(formData.tenthPercentage || (formData as any).tenthMarksheet?.path ? {
             tenthMarks: {
@@ -994,6 +1011,7 @@ const ProfilePage = () => {
                         value={formData.registrationNumber}
                         onChange={handleChange}
                         disabled={!isEditing}
+                        inputProps={{ dir: 'ltr' }}
                       />
                     </Grid>
                   </Grid>

@@ -79,6 +79,7 @@ const JobCard: React.FC<JobCardProps> = ({
   };
 
   const isDeadlinePassed = new Date(job.applicationDeadline) < new Date();
+  const isEligible = cgpaEligible !== false;
 
   return (
     <Card
@@ -192,25 +193,27 @@ const JobCard: React.FC<JobCardProps> = ({
               >
                 Already Applied
               </Button>
-            ) : canApply ? (
+            ) : (
               <Button
                 variant="contained"
                 onClick={() => onApply?.(job._id)}
-                disabled={job.status !== 'Approved'}
+                disabled={!canApply || job.status !== 'Approved' || !isEligible}
                 fullWidth
                 color="primary"
               >
-                Apply Now
+                {!isEligible ? 'Not Eligible' : 'Apply Now'}
               </Button>
-            ) : !cgpaEligible ? (
+            )}
+            {!isEligible && (
               <Alert severity="warning" sx={{ mb: 1 }}>
                 CGPA {userCgpa || 'Not specified'} below required {job.eligibility.minCGPA}
               </Alert>
-            ) : job.status !== 'Approved' ? (
+            )}
+            {isEligible && job.status !== 'Approved' && (
               <Alert severity="info" sx={{ mb: 1 }}>
                 Job not approved yet
               </Alert>
-            ) : null}
+            )}
           </>
         )}
       </CardActions>

@@ -1,20 +1,54 @@
-import { Container, Grid, Card, CardContent, Typography, Button, Box, Alert, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Chip } from '@mui/material';
-import { Work, Assignment, Event, CheckCircle, VerifiedUser, Warning } from '@mui/icons-material';
+import { Container, Grid, Card, CardContent, Typography, Button, Box, Alert, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Chip, CircularProgress } from '@mui/material';
+import { Work, Assignment, Event, CheckCircle, VerifiedUser, Warning, CardGiftcard } from '@mui/icons-material';
 import MainLayout from '../../components/layout/MainLayout';
 import Recommendations from '../../components/jobs/Recommendations';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useState, useEffect } from 'react';
+import api from '../../utils/api';
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [showVerificationPopup, setShowVerificationPopup] = useState(false);
   const [countdown, setCountdown] = useState(30);
+  const [stats, setStats] = useState([
+    { title: 'Applications Sent', value: '0', icon: <Assignment fontSize="large" />, color: '#8B5CF6' },
+    { title: 'Interviews Scheduled', value: '0', icon: <Event fontSize="large" />, color: '#10B981' },
+    { title: 'Shortlisted', value: '0', icon: <CheckCircle fontSize="large" />, color: '#F59E0B' },
+    { title: 'Offers Received', value: '0', icon: <CardGiftcard fontSize="large" />, color: '#EF4444' },
+  ]);
+  const [loading, setLoading] = useState(true);
 
   // Debug logging
   console.log('StudentDashboard - user:', user);
   console.log('StudentDashboard - user role:', user?.role);
+
+  // Fetch dashboard statistics
+  useEffect(() => {
+    const fetchStatistics = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get('/analytics/dashboard');
+        const data = response.data.data;
+        
+        setStats([
+          { title: 'Applications Sent', value: (data.applicationsCount || 0).toString(), icon: <Assignment fontSize="large" />, color: '#8B5CF6' },
+          { title: 'Interviews Scheduled', value: (data.interviewScheduled || 0).toString(), icon: <Event fontSize="large" />, color: '#10B981' },
+          { title: 'Shortlisted', value: (data.shortlisted || 0).toString(), icon: <CheckCircle fontSize="large" />, color: '#F59E0B' },
+          { title: 'Offers Received', value: (data.accepted || 0).toString(), icon: <CardGiftcard fontSize="large" />, color: '#EF4444' },
+        ]);
+      } catch (error) {
+        console.error('Error fetching statistics:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user?.role === 'Student') {
+      fetchStatistics();
+    }
+  }, [user]);
 
   // Show verification popup if student is not verified
   useEffect(() => {
@@ -35,13 +69,6 @@ const StudentDashboard = () => {
       setShowVerificationPopup(false);
     }
   }, [showVerificationPopup, countdown]);
-
-  const stats = [
-    { title: 'Applications Sent', value: '0', icon: <Assignment fontSize="large" />, color: '#8B5CF6' },
-    { title: 'Interviews Scheduled', value: '0', icon: <Event fontSize="large" />, color: '#10B981' },
-    { title: 'Shortlisted', value: '0', icon: <CheckCircle fontSize="large" />, color: '#F59E0B' },
-    { title: 'Job Alerts', value: '0', icon: <Work fontSize="large" />, color: '#EF4444' },
-  ];
 
   const isVerified = user?.studentDetails?.isVerified;
 
@@ -77,25 +104,31 @@ const StudentDashboard = () => {
           </Alert>
         )}
 
-        <Grid container spacing={3} sx={{ mt: 2 }}>
-          {stats.map((stat, index) => (
-            <Grid item xs={12} sm={6} md={3} key={index}>
-              <Card>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Box sx={{ color: stat.color, mr: 2 }}>{stat.icon}</Box>
-                    <Typography variant="h4" color={stat.color}>
-                      {stat.value}
+        {loading ? (
+          <Box display="flex" justifyContent="center" py={4}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <Grid container spacing={3} sx={{ mt: 2 }}>
+            {stats.map((stat, index) => (
+              <Grid item xs={12} sm={6} md={3} key={index}>
+                <Card>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                      <Box sx={{ color: stat.color, mr: 2 }}>{stat.icon}</Box>
+                      <Typography variant="h4" color={stat.color}>
+                        {stat.value}
+                      </Typography>
+                    </Box>
+                    <Typography variant="body2" color="textSecondary">
+                      {stat.title}
                     </Typography>
-                  </Box>
-                  <Typography variant="body2" color="textSecondary">
-                    {stat.title}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        )}
 
         <Box sx={{ mt: 4 }}>
           <Typography variant="h5" gutterBottom>
